@@ -1,8 +1,8 @@
 ---
 id: webhooks
 title: Webhooks
-description: GateCtr peut pousser des événements en temps réel vers n'importe quelle URL — alertes budgétaires, messages Slack, et plus. Apprenez à configurer, vérifier et gérer les webhooks.
-keywords: [webhooks, alertes budgétaires, intégration Slack, notifications d'événements, signature webhook, HMAC]
+description: GateCtr pousse des événements en temps réel vers n'importe quel endpoint HTTPS — changements de plan, alertes budgétaires, résultats de requêtes, et plus. Apprenez à enregistrer, vérifier et gérer les webhooks.
+keywords: [webhooks, événements temps réel, alertes budgétaires, événements facturation, signature HMAC, BullMQ, livraison webhook]
 sidebar_label: Webhooks
 ---
 
@@ -11,22 +11,97 @@ import TabItem from '@theme/TabItem';
 
 # Webhooks
 
-Envoyez des événements vers Slack, Teams ou n'importe quelle URL en temps réel.
+Recevez des notifications en temps réel sur n'importe quel endpoint HTTPS lorsque des événements se produisent dans votre compte GateCtr — changements de plan, alertes budgétaires, résultats de requêtes, et plus.
+
+## Fonctionnement
+
+1. Enregistrez une URL d'endpoint dans le tableau de bord ou via l'API
+2. GateCtr génère automatiquement un secret de signature (`whsec_…`)
+3. Lorsqu'un événement se produit, GateCtr met en file d'attente une tâche de livraison (BullMQ / Redis)
+4. Le worker envoie le payload de l'événement en POST à votre URL, signé avec HMAC-SHA256
+5. Les livraisons échouées sont relancées automatiquement (jusqu'à 6 tentatives)
+
+---
 
 ## Événements supportés
 
-| Événement | Description |
-|-----------|-------------|
-| `budget.threshold_reached` | Alerte préventive de budget déclenchée (ex. à 80%) |
-| `budget.limit_exceeded` | Plafond strict du budget atteint — les requêtes sont bloquées |
-| `request.completed` | Requête traitée avec succès |
-| `request.failed` | Échec de la requête (erreur fournisseur ou validation) |
+### Facturation
 
-## Configurer un webhook
+| Événement | Déclenché quand |
+|-----------|-----------------|
+| `billing.plan_upgraded` | L'utilisateur passe à un plan supérieur |
+| `billing.plan_downgraded` | L'utilisateur passe à un plan inférieur |
+| `billing.payment_failed` | Le paiement de la facture Stripe échoue |
+| `billing.trial_started` | L'abonnement entre en période d'essai |
+| `billing.trial_ending` | La période d'essai est sur le point d'expirer |
+| `billing.subscription_cancellation_scheduled` | Annulation programmée en fin de période |
+
+### Budget
+
+| Événement | Déclenché quand |
+|-----------|-----------------|
+| `budget.threshold` | Les dépenses franchissent un seuil configuré |
+| `budget.exceeded` | Le plafond strict du budget est atteint — requêtes bloquées |
+| `budget.reset` | La période budgétaire se réinitialise (cron quotidien/mensuel) |
+
+### Requêtes
+
+| Événement | Déclenché quand |
+|-----------|-----------------|
+| `request.completed` | Requête LLM traitée avec succès |
+| `request.failed` | Requête échouée (erreur fournisseur ou validation) |
+| `request.routed` | Requête acheminée vers un fournisseur spécifique |
+
+### Fournisseur
+
+| Événement | Déclenché quand |
+|-----------|-----------------|
+| `provider.fallback` | Le fournisseur principal a échoué, le repli est déclenché |
+| `provider.error` | Le fournisseur a retourné une erreur non récupérable |
+
+### Clés API
+
+| Événement | Déclenché quand |
+|-----------|-----------------|
+| `api_key.created` | Nouvelle clé API créée |
+| `api_key.revoked` | Clé API révoquée manuellement |
+| `api_key.expired` | Clé API arrivée à sa date d'expiration |
+
+### Projets
+
+| Événement | Déclenché quand |
+|-----------|-----------------|
+| `project.created` | Nouveau projet créé |
+
+### Équipe
+
+| Événement | Déclenché quand |
+|-----------|-----------------|
+| `team.member.added` | Membre rejoint l'équipe |
+| `team.member.removed` | Membre retiré de l'équipe |
+
+### Usage
+
+| Événement | Déclenché quand |
+|-----------|-----------------|
+| `usage.daily` | Rapport d'usage quotidien généré (cron minuit) |
+
+### Méta-webhook
+
+| Événement | Déclenché quand |
+|-----------|-----------------|
+| `webhook.test` | Livraison de test manuelle déclenchée |
+| `webhook.failed` | Webhook automatiquement désactivé après trop d'échecs |
+
+---
+
+## Enregistrer un webhook
 
 ### Via le tableau de bord
 
-Allez dans **Paramètres → Webhooks → Ajouter un endpoint** dans le [tableau de bord GateCtr](https://app.gatectr.com).
+Allez dans **Paramètres → Webhooks → Ajouter un endpoint** dans le [tableau de bord GateCtr](https://app.gatectr.com). Saisissez un nom, une URL HTTPS et sélectionnez les événements auxquels vous abonner.
+
+GateCtr génère et affiche le secret de signature (`whsec_…`) à la création — copiez-le immédiatement, il ne sera plus affiché.
 
 ### Via API
 
@@ -35,120 +110,186 @@ curl -X POST https://api.gatectr.com/v1/webhooks \
   -H "Authorization: Bearer $GATECTR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
+    "name": "Mon endpoint de production",
     "url": "https://votre-app.com/webhooks/gatectr",
-    "events": ["budget.threshold_reached", "budget.limit_exceeded"],
-    "secret": "votre-secret-de-signature"
+    "events": ["billing.plan_upgraded", "budget.threshold", "request.failed"]
   }'
 ```
 
-### Via SDK
+**Réponse** — le champ `secret` n'est retourné qu'à la création :
+
+```json
+{
+  "id": "clx...",
+  "name": "Mon endpoint de production",
+  "url": "https://votre-app.com/webhooks/gatectr",
+  "secret": "whsec_a3f9...",
+  "events": ["billing.plan_upgraded", "budget.threshold", "request.failed"],
+  "isActive": true,
+  "successCount": 0,
+  "failCount": 0,
+  "lastFiredAt": null,
+  "createdAt": "2026-03-26T10:00:00.000Z"
+}
+```
+
+:::caution
+L'URL **doit utiliser HTTPS**. Les endpoints HTTP sont rejetés avec `url_must_be_https`.
+:::
+
+:::tip Abonnement universel
+Passez `"events": ["*"]` pour recevoir tous les types d'événements sur un seul endpoint.
+:::
+
+---
+
+## Format du payload
+
+Chaque livraison est un POST HTTP avec `Content-Type: application/json` et la structure de corps suivante :
+
+```json
+{
+  "event": "billing.plan_upgraded",
+  "project_id": "usr_abc123",
+  "timestamp": "2026-03-26T10:00:00.000Z",
+  "data": {
+    "previous_plan": "PRO",
+    "new_plan": "TEAM",
+    "subscription_id": "sub_stripe_xyz"
+  }
+}
+```
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| `event` | `string` | Type d'événement (ex. `billing.plan_upgraded`) |
+| `project_id` | `string` | Votre identifiant utilisateur GateCtr |
+| `timestamp` | `string` | Horodatage UTC ISO 8601 |
+| `data` | `object` | Payload spécifique à l'événement |
+
+### Exemples de payloads
 
 <Tabs>
-  <TabItem value="nodejs" label="Node.js" default>
+  <TabItem value="billing-upgrade" label="billing.plan_upgraded" default>
 
-```typescript
-import { GateCtr } from '@gatectr/sdk';
-
-const client = new GateCtr({ apiKey: process.env.GATECTR_API_KEY });
-
-const webhook = await client.webhooks.create({
-  url: 'https://votre-app.com/webhooks/gatectr',
-  events: ['budget.threshold_reached', 'budget.limit_exceeded'],
-});
-
-console.log(webhook.id);      // wh_abc123
-console.log(webhook.secret);  // conservez-le pour la vérification de signature
+```json
+{
+  "event": "billing.plan_upgraded",
+  "project_id": "usr_abc123",
+  "timestamp": "2026-03-26T10:00:00.000Z",
+  "data": {
+    "previous_plan": "FREE",
+    "new_plan": "PRO",
+    "subscription_id": "sub_1ABC..."
+  }
+}
 ```
 
   </TabItem>
-  <TabItem value="python" label="Python">
+  <TabItem value="billing-failed" label="billing.payment_failed">
 
-```python
-import os
-from gatectr import GateCtr
+```json
+{
+  "event": "billing.payment_failed",
+  "project_id": "usr_abc123",
+  "timestamp": "2026-03-26T10:00:00.000Z",
+  "data": {
+    "plan": "PRO",
+    "invoice_id": "in_1ABC...",
+    "amount_due": 2900,
+    "currency": "usd"
+  }
+}
+```
 
-client = GateCtr(api_key=os.environ["GATECTR_API_KEY"])
+  </TabItem>
+  <TabItem value="budget-threshold" label="budget.threshold">
 
-webhook = client.webhooks.create(
-    url="https://votre-app.com/webhooks/gatectr",
-    events=["budget.threshold_reached", "budget.limit_exceeded"],
-)
+```json
+{
+  "event": "budget.threshold",
+  "project_id": "usr_abc123",
+  "timestamp": "2026-03-26T10:00:00.000Z",
+  "data": {
+    "threshold_percent": 80,
+    "used_usd": 8.05,
+    "limit_usd": 10.00,
+    "period": "monthly"
+  }
+}
+```
 
-print(webhook["id"])      # wh_abc123
-print(webhook["secret"])  # conservez-le pour la vérification de signature
+  </TabItem>
+  <TabItem value="webhook-test" label="webhook.test">
+
+```json
+{
+  "event": "webhook.test",
+  "project_id": "usr_abc123",
+  "timestamp": "2026-03-26T10:00:00.000Z",
+  "data": {
+    "message": "Test delivery from GateCtr"
+  }
+}
 ```
 
   </TabItem>
 </Tabs>
 
-## Format du payload
+---
 
-```json
-{
-  "id": "evt_abc123",
-  "type": "budget.threshold_reached",
-  "timestamp": "2025-03-16T14:22:00Z",
-  "data": {
-    "project_id": "proj_123",
-    "project_name": "Mon App",
-    "limit_tokens": 100000,
-    "used_tokens": 80012,
-    "percent": 80,
-    "period": "day",
-    "resets_at": "2025-03-17T00:00:00Z"
-  }
-}
-```
+## En-têtes de requête
 
-### Payload `budget.limit_exceeded`
+Chaque livraison inclut trois en-têtes personnalisés :
 
-```json
-{
-  "id": "evt_def456",
-  "type": "budget.limit_exceeded",
-  "timestamp": "2025-03-16T16:05:00Z",
-  "data": {
-    "project_id": "proj_123",
-    "project_name": "Mon App",
-    "limit_tokens": 100000,
-    "used_tokens": 100023,
-    "period": "day",
-    "resets_at": "2025-03-17T00:00:00Z"
-  }
-}
-```
+| En-tête | Exemple | Description |
+|---------|---------|-------------|
+| `X-GateCtr-Signature` | `hmac-sha256=3d4f…` | HMAC-SHA256 du corps brut de la requête |
+| `X-GateCtr-Event` | `billing.plan_upgraded` | Type d'événement |
+| `X-GateCtr-Delivery` | `550e8400-e29b-…` | UUID unique de livraison |
 
-## Vérifier la signature webhook
+---
 
-Chaque requête webhook inclut un en-tête `X-GateCtr-Signature` contenant une signature HMAC-SHA256. Vérifiez-la toujours avant de traiter l'événement.
+## Vérifier la signature
+
+Vérifiez toujours `X-GateCtr-Signature` avant de traiter un événement. La signature est `hmac-sha256=<hex>` calculée sur le **corps brut de la requête** avec votre secret `whsec_…`.
 
 <Tabs>
   <TabItem value="nodejs" label="Node.js (Next.js)" default>
 
 ```typescript
-import { verifyWebhook } from '@gatectr/sdk';
+import { createHmac, timingSafeEqual } from 'crypto';
 
 export async function POST(req: Request) {
   const body = await req.text();
-  const signature = req.headers.get('X-GateCtr-Signature') ?? '';
+  const sigHeader = req.headers.get('X-GateCtr-Signature') ?? '';
 
-  let event;
-  try {
-    event = verifyWebhook(body, signature, process.env.GATECTR_WEBHOOK_SECRET!);
-  } catch {
+  const expected =
+    'hmac-sha256=' +
+    createHmac('sha256', process.env.GATECTR_WEBHOOK_SECRET!)
+      .update(body)
+      .digest('hex');
+
+  const isValid = timingSafeEqual(
+    Buffer.from(sigHeader),
+    Buffer.from(expected),
+  );
+
+  if (!isValid) {
     return new Response('Signature invalide', { status: 401 });
   }
 
-  switch (event.type) {
-    case 'budget.threshold_reached':
-      console.log(`Projet ${event.data.project_id} à ${event.data.percent}%`);
-      // Notifier l'équipe via Slack, email, etc.
+  const event = JSON.parse(body);
+
+  switch (event.event) {
+    case 'billing.plan_upgraded':
+      console.log(`Plan mis à niveau vers ${event.data.new_plan}`);
       break;
-    case 'budget.limit_exceeded':
-      console.log(`Budget du projet ${event.data.project_id} dépassé — requêtes bloquées`);
+    case 'budget.threshold':
+      console.log(`Budget à ${event.data.threshold_percent}%`);
       break;
-    case 'request.failed':
-      // Enregistrer pour l'observabilité
+    case 'billing.payment_failed':
+      // Alerter votre équipe
       break;
   }
 
@@ -160,30 +301,31 @@ export async function POST(req: Request) {
   <TabItem value="python" label="Python (FastAPI)">
 
 ```python
+import hmac
+import hashlib
+import json
 import os
 from fastapi import FastAPI, Request, HTTPException
-from gatectr import verify_webhook
 
 app = FastAPI()
 
 @app.post("/webhooks/gatectr")
 async def handle_webhook(request: Request):
     body = await request.body()
-    signature = request.headers.get("X-GateCtr-Signature", "")
+    sig_header = request.headers.get("X-GateCtr-Signature", "")
+    secret = os.environ["GATECTR_WEBHOOK_SECRET"].encode()
 
-    try:
-        event = verify_webhook(body, signature, os.environ["GATECTR_WEBHOOK_SECRET"])
-    except ValueError:
+    expected = "hmac-sha256=" + hmac.new(secret, body, hashlib.sha256).hexdigest()
+
+    if not hmac.compare_digest(sig_header, expected):
         raise HTTPException(status_code=401, detail="Signature invalide")
 
-    if event["type"] == "budget.threshold_reached":
-        project_id = event["data"]["project_id"]
-        percent = event["data"]["percent"]
-        print(f"Projet {project_id} à {percent}% du budget")
+    event = json.loads(body)
 
-    elif event["type"] == "budget.limit_exceeded":
-        project_id = event["data"]["project_id"]
-        print(f"Budget du projet {project_id} dépassé — requêtes bloquées")
+    if event["event"] == "billing.plan_upgraded":
+        print(f"Plan mis à niveau vers {event['data']['new_plan']}")
+    elif event["event"] == "budget.threshold":
+        print(f"Budget à {event['data']['threshold_percent']}%")
 
     return {"ok": True}
 ```
@@ -193,59 +335,140 @@ async def handle_webhook(request: Request):
 
 ```typescript
 import express from 'express';
-import { verifyWebhook } from '@gatectr/sdk';
+import { createHmac, timingSafeEqual } from 'crypto';
 
 const app = express();
 
-app.post('/webhooks/gatectr', express.raw({ type: 'application/json' }), (req, res) => {
-  const signature = req.headers['x-gatectr-signature'] ?? '';
+app.post(
+  '/webhooks/gatectr',
+  express.raw({ type: 'application/json' }),
+  (req, res) => {
+    const body = req.body.toString();
+    const sigHeader = req.headers['x-gatectr-signature'] ?? '';
 
-  let event;
-  try {
-    event = verifyWebhook(req.body.toString(), signature, process.env.GATECTR_WEBHOOK_SECRET!);
-  } catch {
-    return res.status(401).json({ error: 'Signature invalide' });
-  }
+    const expected =
+      'hmac-sha256=' +
+      createHmac('sha256', process.env.GATECTR_WEBHOOK_SECRET!)
+        .update(body)
+        .digest('hex');
 
-  if (event.type === 'budget.threshold_reached') {
-    // Gérer l'alerte
-  }
+    try {
+      if (!timingSafeEqual(Buffer.from(sigHeader as string), Buffer.from(expected))) {
+        return res.status(401).json({ error: 'Signature invalide' });
+      }
+    } catch {
+      return res.status(401).json({ error: 'Signature invalide' });
+    }
 
-  res.json({ ok: true });
-});
+    const event = JSON.parse(body);
+    // Traiter event.event …
+
+    res.json({ ok: true });
+  },
+);
 ```
 
   </TabItem>
 </Tabs>
 
-## Intégration Slack
+:::danger Toujours utiliser une comparaison à temps constant
+Utilisez `timingSafeEqual` (Node.js) ou `hmac.compare_digest` (Python) pour éviter les attaques temporelles. N'utilisez jamais `===` pour comparer les signatures.
+:::
 
-Pointez l'URL du webhook vers un Slack Incoming Webhook :
+---
 
-1. Créez un [Slack Incoming Webhook](https://api.slack.com/messaging/webhooks) pour votre espace de travail
-2. Ajoutez l'URL Slack comme endpoint de webhook dans GateCtr
-3. Abonnez-vous à `budget.threshold_reached` et `budget.limit_exceeded`
+## Politique de relance
 
-GateCtr formate automatiquement les événements budgétaires en messages Slack lisibles :
+Le worker de livraison relance automatiquement les livraisons échouées :
 
+| Tentative | Délai | Déclenchée par |
+|-----------|-------|----------------|
+| 1 (initiale) | — | Toujours |
+| 2 | 1 s | Erreur 5xx ou réseau |
+| 3 | 2 s | Erreur 5xx ou réseau |
+| 4 | 4 s | Erreur 5xx ou réseau |
+| 5 | 8 s | Erreur 5xx ou réseau |
+| 6 | 16 s | Erreur 5xx ou réseau |
+
+**Cas particuliers :**
+- **4xx (sauf 429)** — La livraison échoue immédiatement, pas de relance
+- **429 Too Many Requests** — Respecte l'en-tête `Retry-After` de la réponse
+- **Délai d'expiration de connexion** — Limite de 10 secondes par tentative, puis relance
+
+**Désactivation automatique :** Si un endpoint accumule plus de **10 échecs consécutifs**, il est automatiquement désactivé. Réactivez-le depuis **Paramètres → Webhooks** une fois le problème résolu.
+
+---
+
+## Journaux de livraison
+
+Chaque tentative de livraison est enregistrée. Récupérez les 50 dernières pour un webhook donné :
+
+```bash
+curl https://api.gatectr.com/v1/webhooks/{id}/deliveries \
+  -H "Authorization: Bearer $GATECTR_API_KEY"
 ```
-⚠️ GateCtr — Alerte Budgétaire
-Le projet "Mon App" a atteint 80% de son budget quotidien de tokens.
-Utilisés : 80 012 / 100 000 tokens. Réinitialisation à minuit UTC.
+
+```json
+{
+  "deliveries": [
+    {
+      "id": "clx...",
+      "deliveryId": "550e8400-...",
+      "event": "billing.plan_upgraded",
+      "status": 200,
+      "success": true,
+      "responseMs": 142,
+      "retryCount": 0,
+      "error": null,
+      "createdAt": "2026-03-26T10:00:00.000Z"
+    }
+  ]
+}
 ```
 
-## Nouvelles tentatives
+---
 
-Les livraisons échouées (réponse non-2xx ou expiration) sont réessayées avec un recul exponentiel :
+## Envoyer une livraison de test
 
-| Tentative | Délai |
-|-----------|-------|
-| 1re tentative | 1 seconde |
-| 2e tentative | 5 secondes |
-| 3e tentative | 30 secondes |
+Déclenchez un événement de test immédiat pour vérifier que votre endpoint est accessible :
 
-Après 3 tentatives échouées, l'événement est marqué comme échoué. Vous pouvez rejouer les événements échoués depuis le tableau de bord : **Paramètres → Webhooks → Événements échoués**.
+```bash
+curl -X POST https://api.gatectr.com/v1/webhooks/{id}/test \
+  -H "Authorization: Bearer $GATECTR_API_KEY"
+```
+
+```json
+{ "queued": true }
+```
+
+Le payload de test utilise le type d'événement `webhook.test`.
+
+---
+
+## Gérer les webhooks
+
+### Mettre à jour un endpoint
+
+```bash
+curl -X PATCH https://api.gatectr.com/v1/webhooks/{id} \
+  -H "Authorization: Bearer $GATECTR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "isActive": false }'
+```
+
+Champs modifiables : `name`, `url`, `events`, `isActive`.
+
+### Supprimer un endpoint
+
+```bash
+curl -X DELETE https://api.gatectr.com/v1/webhooks/{id} \
+  -H "Authorization: Bearer $GATECTR_API_KEY"
+```
+
+Retourne `204 No Content` en cas de succès.
+
+---
 
 ## Disponible sur
 
-Forfait Pro et supérieur.
+Forfait Pro et supérieur. Le nombre d'endpoints webhook que vous pouvez créer dépend du quota de votre forfait.
