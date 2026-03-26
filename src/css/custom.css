@@ -69,6 +69,10 @@ code {
   font-weight: 700;
 }
 
+.navbar-brand-c {
+  color: #00B4C8;
+}
+
 
 /* ── Feature cards ──────────────────────────────────────────────────────── */
 .feature-card {
