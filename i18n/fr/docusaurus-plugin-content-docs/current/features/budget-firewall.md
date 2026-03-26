@@ -87,7 +87,7 @@ Voir [Webhooks](./webhooks.md) pour configurer où les alertes sont livrées.
 
 ## Remplacer le budget par requête
 
-Utilisez `budgetId` pour appliquer un budget différent à une requête spécifique :
+Utilisez `gatectr.budgetId` pour appliquer un budget différent à une requête spécifique :
 
 <Tabs>
   <TabItem value="nodejs" label="Node.js" default>
