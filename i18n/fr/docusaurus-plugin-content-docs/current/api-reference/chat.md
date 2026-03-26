@@ -49,6 +49,13 @@ Mêmes paramètres que [POST /v1/complete](complete.md) : `model`, `messages`, `
     "completion_tokens": 9,
     "total_tokens": 21,
     "saved_tokens": 8
+  },
+  "gatectr": {
+    "requestId": "req_abc123",
+    "latencyMs": 342,
+    "overage": false,
+    "modelUsed": "gpt-4o",
+    "tokensSaved": 8
   }
 }
 ```
@@ -56,6 +63,26 @@ Mêmes paramètres que [POST /v1/complete](complete.md) : `model`, `messages`, `
 ### En-têtes de réponse
 
 Mêmes que [POST /v1/complete](complete.md) : `X-GateCtr-Request-Id`, `X-GateCtr-Latency-Ms`, `X-GateCtr-Overage`.
+
+### Champs de la réponse
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | ID unique de la completion |
+| `object` | `string` | Toujours `"chat.completion"` |
+| `model` | `string` | Modèle qui a généré la réponse |
+| `choices[].message.role` | `string` | Toujours `"assistant"` |
+| `choices[].message.content` | `string` | La réponse de l'assistant |
+| `choices[].finish_reason` | `string` | `"stop"`, `"length"`, ou `"content_filter"` |
+| `usage.prompt_tokens` | `number` | Tokens de la requête (après optimisation) |
+| `usage.completion_tokens` | `number` | Tokens de la completion |
+| `usage.total_tokens` | `number` | Somme des tokens de prompt et de completion |
+| `usage.saved_tokens` | `number` | Tokens économisés par l'Optimiseur de Contexte |
+| `gatectr.requestId` | `string` | ID unique de la requête (miroir de l'en-tête `X-GateCtr-Request-Id`) |
+| `gatectr.latencyMs` | `number` | Latence bout-en-bout en millisecondes |
+| `gatectr.overage` | `boolean` | `true` si la requête a dépassé le plafond budgétaire |
+| `gatectr.modelUsed` | `string` | Modèle réel ayant traité la requête |
+| `gatectr.tokensSaved` | `number` | Tokens économisés par l'Optimiseur de Contexte |
 
 ## Utiliser l'alias compatible OpenAI
 

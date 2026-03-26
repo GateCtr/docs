@@ -74,6 +74,13 @@ POST https://api.gatectr.com/v1/complete
     "completion_tokens": 9,
     "total_tokens": 21,
     "saved_tokens": 8
+  },
+  "gatectr": {
+    "requestId": "req_abc123",
+    "latencyMs": 342,
+    "overage": false,
+    "modelUsed": "gpt-4o",
+    "tokensSaved": 8
   }
 }
 ```
@@ -101,18 +108,11 @@ GateCtr sets these headers on every response:
 | `usage.completion_tokens` | `number` | Tokens in the completion |
 | `usage.total_tokens` | `number` | Sum of prompt and completion tokens |
 | `usage.saved_tokens` | `number` | Tokens saved by Context Optimizer |
-
-### SDK `gatectr` metadata
-
-When using the GateCtr SDK, the response object also exposes a `gatectr` field assembled from the response headers and body:
-
-```typescript
-response.gatectr.requestId    // from X-GateCtr-Request-Id header
-response.gatectr.latencyMs    // from X-GateCtr-Latency-Ms header
-response.gatectr.overage      // from X-GateCtr-Overage header
-response.gatectr.modelUsed    // from response body's model field
-response.gatectr.tokensSaved  // from response body's usage.saved_tokens
-```
+| `gatectr.requestId` | `string` | Unique request ID (mirrors `X-GateCtr-Request-Id` header) |
+| `gatectr.latencyMs` | `number` | End-to-end latency in milliseconds |
+| `gatectr.overage` | `boolean` | `true` if this request exceeded your budget cap |
+| `gatectr.modelUsed` | `string` | Actual model that served the request |
+| `gatectr.tokensSaved` | `number` | Tokens saved by Context Optimizer |
 
 ## Streaming
 

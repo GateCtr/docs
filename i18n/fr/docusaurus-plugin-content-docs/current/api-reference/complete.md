@@ -74,6 +74,13 @@ POST https://api.gatectr.com/v1/complete
     "completion_tokens": 9,
     "total_tokens": 21,
     "saved_tokens": 8
+  },
+  "gatectr": {
+    "requestId": "req_abc123",
+    "latencyMs": 342,
+    "overage": false,
+    "modelUsed": "gpt-4o",
+    "tokensSaved": 8
   }
 }
 ```
@@ -101,6 +108,11 @@ GateCtr définit ces en-têtes sur chaque réponse :
 | `usage.completion_tokens` | `number` | Tokens de la completion |
 | `usage.total_tokens` | `number` | Somme des tokens de prompt et de completion |
 | `usage.saved_tokens` | `number` | Tokens économisés par l'Optimiseur de Contexte |
+| `gatectr.requestId` | `string` | ID unique de la requête (miroir de l'en-tête `X-GateCtr-Request-Id`) |
+| `gatectr.latencyMs` | `number` | Latence bout-en-bout en millisecondes |
+| `gatectr.overage` | `boolean` | `true` si la requête a dépassé le plafond budgétaire |
+| `gatectr.modelUsed` | `string` | Modèle réel ayant traité la requête |
+| `gatectr.tokensSaved` | `number` | Tokens économisés par l'Optimiseur de Contexte |
 
 ### Métadonnées `gatectr` du SDK
 
