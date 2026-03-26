@@ -244,7 +244,6 @@ interface UsageResponse {
     totalRequests: number;
     totalCostUsd: number;
   }>;
-  budgetStatus?: Record<string, unknown>;
 }
 ```
 

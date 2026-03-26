@@ -40,7 +40,7 @@ Receive real-time notifications at any HTTPS endpoint when events happen in your
 
 | Event | When it fires |
 |-------|---------------|
-| `budget.threshold` | Spending crosses a configured threshold |
+| `budget.threshold_reached` | Spending crosses a configured threshold |
 | `budget.exceeded` | Hard budget cap reached — requests blocked |
 | `budget.reset` | Budget period resets (daily/monthly cron) |
 
@@ -112,7 +112,7 @@ curl -X POST https://api.gatectr.com/v1/webhooks \
   -d '{
     "name": "My production endpoint",
     "url": "https://your-app.com/webhooks/gatectr",
-    "events": ["billing.plan_upgraded", "budget.threshold", "request.failed"]
+    "events": ["billing.plan_upgraded", "budget.threshold_reached", "request.failed"]
   }'
 ```
 
@@ -124,7 +124,7 @@ curl -X POST https://api.gatectr.com/v1/webhooks \
   "name": "My production endpoint",
   "url": "https://your-app.com/webhooks/gatectr",
   "secret": "whsec_a3f9...",
-  "events": ["billing.plan_upgraded", "budget.threshold", "request.failed"],
+  "events": ["billing.plan_upgraded", "budget.threshold_reached", "request.failed"],
   "isActive": true,
   "successCount": 0,
   "failCount": 0,
@@ -203,11 +203,11 @@ Every delivery is an HTTP POST with `Content-Type: application/json` and the fol
 ```
 
   </TabItem>
-  <TabItem value="budget-threshold" label="budget.threshold">
+  <TabItem value="budget-threshold" label="budget.threshold_reached">
 
 ```json
 {
-  "event": "budget.threshold",
+  "event": "budget.threshold_reached",
   "project_id": "usr_abc123",
   "timestamp": "2026-03-26T10:00:00.000Z",
   "data": {
@@ -285,7 +285,7 @@ export async function POST(req: Request) {
     case 'billing.plan_upgraded':
       console.log(`Plan upgraded to ${event.data.new_plan}`);
       break;
-    case 'budget.threshold':
+    case 'budget.threshold_reached':
       console.log(`Budget at ${event.data.threshold_percent}%`);
       break;
     case 'billing.payment_failed':
@@ -323,7 +323,7 @@ async def handle_webhook(request: Request):
 
     if event["event"] == "billing.plan_upgraded":
         print(f"Plan upgraded to {event['data']['new_plan']}")
-    elif event["event"] == "budget.threshold":
+    elif event["event"] == "budget.threshold_reached":
         print(f"Budget at {event['data']['threshold_percent']}%")
 
     return {"ok": True}

@@ -58,7 +58,7 @@ client = GateCtr(
 Text completion — POST /complete.
 
 ```python
-response = client.complete(
+response = await client.complete(
     model="gpt-4o",        # model name or "auto" for Model Router
     messages=[
         {"role": "system", "content": "You are a helpful assistant."},
@@ -101,7 +101,7 @@ print(response.gatectr.model_used)    # model that handled the request
 Chat completion — POST /chat. Returns messages in the `choices[].message` format.
 
 ```python
-response = client.chat(
+response = await client.chat(
     model="gpt-4o",
     messages=[
         {"role": "system", "content": "You are a helpful assistant."},
@@ -128,7 +128,7 @@ print(response.choices[0].message.role)   # "assistant"
 Streaming chat completion — POST /chat with `stream: true`. Returns an async iterator of `StreamChunk`.
 
 ```python
-for chunk in client.stream(
+async for chunk in client.stream(
     model="gpt-4o",
     messages=[{"role": "user", "content": "Write a haiku about code."}],
 ):

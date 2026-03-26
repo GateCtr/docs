@@ -112,7 +112,7 @@ curl -X POST https://api.gatectr.com/v1/webhooks \
   -d '{
     "name": "Mon endpoint de production",
     "url": "https://votre-app.com/webhooks/gatectr",
-    "events": ["billing.plan_upgraded", "budget.threshold", "request.failed"]
+    "events": ["billing.plan_upgraded", "budget.threshold_reached", "request.failed"]
   }'
 ```
 
@@ -124,7 +124,7 @@ curl -X POST https://api.gatectr.com/v1/webhooks \
   "name": "Mon endpoint de production",
   "url": "https://votre-app.com/webhooks/gatectr",
   "secret": "whsec_a3f9...",
-  "events": ["billing.plan_upgraded", "budget.threshold", "request.failed"],
+  "events": ["billing.plan_upgraded", "budget.threshold_reached", "request.failed"],
   "isActive": true,
   "successCount": 0,
   "failCount": 0,
@@ -203,11 +203,11 @@ Chaque livraison est un POST HTTP avec `Content-Type: application/json` et la st
 ```
 
   </TabItem>
-  <TabItem value="budget-threshold" label="budget.threshold">
+  <TabItem value="budget-threshold" label="budget.threshold_reached">
 
 ```json
 {
-  "event": "budget.threshold",
+  "event": "budget.threshold_reached",
   "project_id": "usr_abc123",
   "timestamp": "2026-03-26T10:00:00.000Z",
   "data": {
@@ -285,7 +285,7 @@ export async function POST(req: Request) {
     case 'billing.plan_upgraded':
       console.log(`Plan mis à niveau vers ${event.data.new_plan}`);
       break;
-    case 'budget.threshold':
+    case 'budget.threshold_reached':
       console.log(`Budget à ${event.data.threshold_percent}%`);
       break;
     case 'billing.payment_failed':
@@ -324,7 +324,7 @@ async def handle_webhook(request: Request):
 
     if event["event"] == "billing.plan_upgraded":
         print(f"Plan mis à niveau vers {event['data']['new_plan']}")
-    elif event["event"] == "budget.threshold":
+    elif event["event"] == "budget.threshold_reached":
         print(f"Budget à {event['data']['threshold_percent']}%")
 
     return {"ok": True}
