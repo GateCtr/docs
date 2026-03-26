@@ -111,10 +111,10 @@ function HeroSection() {
         </div>
         <div className={styles.buttons}>
           <Link className={styles.btnPrimary} to="/docs/getting-started/quickstart">
-            <Translate id="home.hero.cta.primary">Start free</Translate>
+            <Translate id="home.hero.cta.primary">Quickstart</Translate>
           </Link>
           <Link className={styles.btnSecondary} to="/docs/api-reference/complete">
-            <Translate id="home.hero.cta.secondary">View docs</Translate>
+            <Translate id="home.hero.cta.secondary">API Reference</Translate>
           </Link>
         </div>
       </div>

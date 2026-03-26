@@ -1,19 +1,31 @@
 {
-  "home.hero.title": {
-    "message": "Une passerelle. Tous les LLMs.",
-    "description": "Hero title on homepage"
+  "home.hero.eyebrow": {
+    "message": "Passerelle LLM · Contrôle des coûts · Routage intelligent",
+    "description": "Hero eyebrow pill label"
+  },
+  "home.hero.title.line1": {
+    "message": "Une passerelle.",
+    "description": "Hero title first part"
+  },
+  "home.hero.title.line2": {
+    "message": "Tous les LLMs.",
+    "description": "Hero title second part (accent color)"
   },
   "home.hero.subtitle": {
     "message": "Un changement d'endpoint. -40% de coûts. Sans toucher à votre code.",
     "description": "Hero subtitle on homepage"
   },
+  "home.hero.code": {
+    "message": "npm install @gatectr/sdk",
+    "description": "Install snippet shown in hero"
+  },
   "home.hero.cta.primary": {
-    "message": "Démarrer gratuitement",
-    "description": "Primary CTA button"
+    "message": "Démarrage rapide",
+    "description": "Primary CTA button — links to quickstart guide"
   },
   "home.hero.cta.secondary": {
-    "message": "Voir la documentation",
-    "description": "Secondary CTA button"
+    "message": "Référence API",
+    "description": "Secondary CTA button — links to API reference"
   },
   "home.meta.title": {
     "message": "GateCtr — Une passerelle. Tous les LLMs.",
