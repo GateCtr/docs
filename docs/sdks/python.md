@@ -58,6 +58,8 @@ client = GateCtr(
 Text completion — POST /complete.
 
 ```python
+from gatectr.types import PerRequestOptions
+
 response = await client.complete(
     model="gpt-4o",        # model name or "auto" for Model Router
     messages=[
