@@ -37,6 +37,7 @@ h1, h2, h3, h4, h5, h6,
   font-weight: 700;
   letter-spacing: -0.025em;
   line-height: 1.2;
+  color: var(--ifm-heading-color);
 }
 
 h1, .markdown h1 { font-weight: 800; }
@@ -55,6 +56,17 @@ code {
 /* ── Navbar ─────────────────────────────────────────────────────────────── */
 .navbar__logo img {
   height: 28px;
+}
+
+.navbar__brand,
+.navbar__brand:hover,
+.navbar__brand:focus {
+  color: var(--ifm-navbar-link-color);
+}
+
+.navbar__title {
+  color: var(--ifm-navbar-link-color);
+  font-weight: 700;
 }
 
 
