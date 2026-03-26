@@ -34,6 +34,14 @@ const config = {
   headTags: [
     {
       tagName: 'link',
+      attributes: { rel: 'icon', type: 'image/x-icon', href: '/img/favicon.ico' },
+    },
+    {
+      tagName: 'link',
+      attributes: { rel: 'shortcut icon', href: '/img/favicon.ico' },
+    },
+    {
+      tagName: 'link',
       attributes: { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
     },
     {
