@@ -15,7 +15,13 @@ Up and running in 5 min. No code changes required.
 
 ## 1. Get your API key
 
-Sign up at [gatectr.com](https://gatectr.com) and grab your API key from the dashboard.
+Sign up at [gatectr.com](https://gatectr.com) and grab your API key from the [dashboard](https://app.gatectr.com).
+
+Your key will look like `gct_live_xxxxxxxxxxxx`. Store it in an environment variable — never commit it to source control.
+
+```bash
+export GATECTR_API_KEY="gct_live_xxxxxxxxxxxx"
+```
 
 ## 2. Install the SDK
 
@@ -31,6 +37,8 @@ npm install @gatectr/sdk
 
 ```bash
 pip install gatectr-sdk
+# or
+uv add gatectr-sdk
 ```
 
   </TabItem>
@@ -57,6 +65,11 @@ const response = await client.complete({
 });
 
 console.log(response.choices[0].message.content);
+// → "Hello! How can I help you today?"
+
+// GateCtr metadata on every response
+console.log(response.gatectr.tokens_saved);  // tokens saved by optimizer
+console.log(response.gatectr.cost_usd);      // estimated cost in USD
 ```
 
   </TabItem>
@@ -74,6 +87,11 @@ response = client.complete(
 )
 
 print(response.choices[0].message.content)
+# → "Hello! How can I help you today?"
+
+# GateCtr metadata on every response
+print(response.gatectr["tokens_saved"])  # tokens saved by optimizer
+print(response.gatectr["cost_usd"])      # estimated cost in USD
 ```
 
   </TabItem>
@@ -94,14 +112,61 @@ curl https://api.gatectr.com/v1/complete \
 
 That's it. GateCtr is now optimizing, routing, and tracking every request.
 
+## 4. Drop in for OpenAI (optional)
+
+Already using the OpenAI SDK? Point it at GateCtr — no other changes:
+
+<Tabs>
+  <TabItem value="nodejs" label="Node.js" default>
+
+```typescript
+import OpenAI from 'openai';
+
+const openai = new OpenAI({
+  apiKey: process.env.GATECTR_API_KEY,
+  baseURL: 'https://api.gatectr.com/v1',
+});
+
+// All existing calls work unchanged
+const response = await openai.chat.completions.create({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Hello' }],
+});
+```
+
+  </TabItem>
+  <TabItem value="python" label="Python">
+
+```python
+import os
+from openai import OpenAI
+
+client = OpenAI(
+    api_key=os.environ["GATECTR_API_KEY"],
+    base_url="https://api.gatectr.com/v1",
+)
+
+# All existing calls work unchanged
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Hello"}],
+)
+```
+
+  </TabItem>
+</Tabs>
+
 ## What just happened
 
-- Context Optimizer compressed your prompt before sending it to the LLM
-- Budget Firewall checked your project limits
-- Analytics logged the token usage and cost in your dashboard
+- **Context Optimizer** compressed your prompt before sending it to the LLM
+- **Budget Firewall** checked your project limits
+- **Analytics** logged the token usage and cost in your dashboard
+
+View the full usage breakdown at [app.gatectr.com](https://app.gatectr.com).
 
 ## Next steps
 
-- [Set up a Budget Firewall](../features/budget-firewall.md)
-- [Enable the Context Optimizer](../features/context-optimizer.md)
-- [Configure Webhooks](../features/webhooks.md)
+- [Set up a Budget Firewall](../features/budget-firewall.md) — prevent runaway costs
+- [Enable the Context Optimizer](../features/context-optimizer.md) — save up to 40% on tokens
+- [Use the Model Router](../features/model-router.md) — automatically pick the cheapest model
+- [Configure Webhooks](../features/webhooks.md) — get Slack alerts on budget events

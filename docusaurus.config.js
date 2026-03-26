@@ -110,7 +110,7 @@ const config = {
             'LLM gateway, AI API, OpenAI proxy, token optimization, cost control, model router, prompt compression',
         },
         { name: 'twitter:card', content: 'summary_large_image' },
-        { name: 'twitter:site', content: '@gatectr' },
+        { name: 'twitter:site', content: '@gatectrl' },
         { property: 'og:type', content: 'website' },
         { property: 'og:site_name', content: 'GateCtr Docs' },
       ],
@@ -160,7 +160,7 @@ const config = {
           {
             title: 'Product',
             items: [
-              { label: 'Dashboard', href: 'https://gatectr.com/dashboard' },
+              { label: 'Dashboard', href: 'https://app.gatectr.com' },
               { label: 'Pricing', href: 'https://gatectr.com/pricing' },
               { label: 'Status', href: 'https://status.gatectr.com' },
             ],
@@ -169,7 +169,7 @@ const config = {
             title: 'Community',
             items: [
               { label: 'GitHub', href: 'https://github.com/GateCtr' },
-              { label: 'Twitter', href: 'https://twitter.com/gatectr' },
+              { label: 'Twitter', href: 'https://twitter.com/gatectrl' },
             ],
           },
         ],

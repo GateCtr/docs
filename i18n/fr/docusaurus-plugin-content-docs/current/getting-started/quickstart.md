@@ -15,7 +15,13 @@ Opérationnel en 5 min. Aucune modification de code requise.
 
 ## 1. Obtenez votre clé API
 
-Créez un compte sur [gatectr.com](https://gatectr.com) et récupérez votre clé API depuis le tableau de bord.
+Créez un compte sur [gatectr.com](https://gatectr.com) et récupérez votre clé API depuis le [tableau de bord](https://app.gatectr.com).
+
+Votre clé ressemblera à `gct_live_xxxxxxxxxxxx`. Stockez-la dans une variable d'environnement — ne la commitez jamais dans votre code source.
+
+```bash
+export GATECTR_API_KEY="gct_live_xxxxxxxxxxxx"
+```
 
 ## 2. Installez le SDK
 
@@ -31,6 +37,8 @@ npm install @gatectr/sdk
 
 ```bash
 pip install gatectr-sdk
+# ou
+uv add gatectr-sdk
 ```
 
   </TabItem>
@@ -57,6 +65,11 @@ const response = await client.complete({
 });
 
 console.log(response.choices[0].message.content);
+// → "Bonjour ! Comment puis-je vous aider ?"
+
+// Métadonnées GateCtr sur chaque réponse
+console.log(response.gatectr.tokens_saved);  // tokens économisés par l'optimiseur
+console.log(response.gatectr.cost_usd);      // coût estimé en USD
 ```
 
   </TabItem>
@@ -74,6 +87,11 @@ response = client.complete(
 )
 
 print(response.choices[0].message.content)
+# → "Bonjour ! Comment puis-je vous aider ?"
+
+# Métadonnées GateCtr sur chaque réponse
+print(response.gatectr["tokens_saved"])  # tokens économisés par l'optimiseur
+print(response.gatectr["cost_usd"])      # coût estimé en USD
 ```
 
   </TabItem>
@@ -94,14 +112,61 @@ curl https://api.gatectr.com/v1/complete \
 
 C'est tout. GateCtr optimise, route et trace maintenant chaque requête.
 
+## 4. Remplacement pour OpenAI (optionnel)
+
+Vous utilisez déjà le SDK OpenAI ? Pointez-le vers GateCtr — sans autres modifications :
+
+<Tabs>
+  <TabItem value="nodejs" label="Node.js" default>
+
+```typescript
+import OpenAI from 'openai';
+
+const openai = new OpenAI({
+  apiKey: process.env.GATECTR_API_KEY,
+  baseURL: 'https://api.gatectr.com/v1',
+});
+
+// Tous les appels existants fonctionnent sans modification
+const response = await openai.chat.completions.create({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Bonjour' }],
+});
+```
+
+  </TabItem>
+  <TabItem value="python" label="Python">
+
+```python
+import os
+from openai import OpenAI
+
+client = OpenAI(
+    api_key=os.environ["GATECTR_API_KEY"],
+    base_url="https://api.gatectr.com/v1",
+)
+
+# Tous les appels existants fonctionnent sans modification
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Bonjour"}],
+)
+```
+
+  </TabItem>
+</Tabs>
+
 ## Ce qui vient de se passer
 
-- L'Optimiseur de Contexte a compressé votre prompt avant de l'envoyer au LLM
-- Le Pare-feu Budgétaire a vérifié vos limites de projet
-- Les analytiques ont enregistré l'utilisation des tokens et le coût dans votre tableau de bord
+- **L'Optimiseur de Contexte** a compressé votre prompt avant de l'envoyer au LLM
+- **Le Pare-feu Budgétaire** a vérifié vos limites de projet
+- **Les Analytiques** ont enregistré l'utilisation des tokens et le coût dans votre tableau de bord
+
+Consultez le détail complet de l'utilisation sur [app.gatectr.com](https://app.gatectr.com).
 
 ## Prochaines étapes
 
-- [Configurer un Pare-feu Budgétaire](../features/budget-firewall.md)
-- [Activer l'Optimiseur de Contexte](../features/context-optimizer.md)
-- [Configurer les Webhooks](../features/webhooks.md)
+- [Configurer un Pare-feu Budgétaire](../features/budget-firewall.md) — éviter les coûts incontrôlés
+- [Activer l'Optimiseur de Contexte](../features/context-optimizer.md) — économiser jusqu'à 40% sur les tokens
+- [Utiliser le Routeur de Modèles](../features/model-router.md) — choisir automatiquement le modèle le moins cher
+- [Configurer les Webhooks](../features/webhooks.md) — recevoir des alertes Slack sur les événements budgétaires
