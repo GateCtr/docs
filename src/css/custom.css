@@ -10,7 +10,7 @@
 
   /* Typography */
   --ifm-font-family-base: 'Inter', system-ui, -apple-system, sans-serif;
-  --ifm-heading-font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  --ifm-heading-font-family: 'Syne', system-ui, -apple-system, sans-serif;
   --ifm-font-family-monospace: 'JetBrains Mono', 'Courier New', monospace;
   --ifm-code-font-size: 90%;
 
@@ -30,12 +30,17 @@
   --docusaurus-highlighted-code-line-bg: rgba(0, 180, 200, 0.15);
 }
 
-/* ── Heading typography — brand spec ────────────────────────────────────── */
-h1, h2, h3, h4, h5, h6 {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+/* ── Heading typography — Syne brand spec ───────────────────────────────── */
+h1, h2, h3, h4, h5, h6,
+.markdown h1, .markdown h2, .markdown h3, .markdown h4, .markdown h5, .markdown h6 {
+  font-family: 'Syne', system-ui, -apple-system, sans-serif;
+  font-weight: 700;
   letter-spacing: -0.025em;
-  line-height: 1.25;
+  line-height: 1.2;
 }
+
+h1, .markdown h1 { font-weight: 800; }
+h2, .markdown h2 { font-weight: 700; }
 
 /* ── Code & pre — JetBrains Mono ────────────────────────────────────────── */
 code, pre, kbd, samp {
