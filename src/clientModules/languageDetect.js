@@ -1,28 +1,19 @@
 (function () {
   if (typeof window === 'undefined') return;
 
-  var KEY = 'gatectr-locale';
+  var KEY = 'gatectr-lang-detected';
+
+  if (localStorage.getItem(KEY)) return;
+
+  localStorage.setItem(KEY, '1');
+
   var path = window.location.pathname;
-  var currentLocale = path.startsWith('/fr') ? 'fr' : 'en';
-  var stored = localStorage.getItem(KEY);
 
-  function redirectToFr() {
-    var base = path === '/' ? '' : path;
-    localStorage.setItem(KEY, 'fr');
-    window.location.replace('/fr' + base + window.location.search);
-  }
+  if (path.startsWith('/fr')) return;
 
-  if (stored === null) {
-    var lang = (navigator.language || navigator.userLanguage || '').toLowerCase();
-    if (lang.startsWith('fr') && currentLocale !== 'fr') {
-      redirectToFr();
-      return;
-    }
-    localStorage.setItem(KEY, currentLocale);
-  } else if (stored === 'fr' && currentLocale !== 'fr') {
-    redirectToFr();
-    return;
-  }
+  var lang = (navigator.language || navigator.userLanguage || '').toLowerCase();
+  if (!lang.startsWith('fr')) return;
 
-  localStorage.setItem(KEY, currentLocale);
+  var base = path === '/' ? '' : path;
+  window.location.replace('/fr' + base + window.location.search);
 })();
