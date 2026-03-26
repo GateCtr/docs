@@ -69,7 +69,7 @@ const config = {
         docs: {
           sidebarPath: './sidebars.js',
           editUrl: 'https://github.com/GateCtr/docs/edit/main/',
-          showLastUpdateTime: true,
+          showLastUpdateTime: false,
         },
         blog: false,
         theme: {
@@ -173,7 +173,7 @@ const config = {
             ],
           },
         ],
-        copyright: `Copyright © ${new Date().getFullYear()} GateCtr. Built with Docusaurus.`,
+        copyright: `Copyright © ${new Date().getFullYear()} GateCtr.`,
       },
 
       prism: {

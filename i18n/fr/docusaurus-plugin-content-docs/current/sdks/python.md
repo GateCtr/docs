@@ -18,7 +18,7 @@ pip install gatectr-sdk
 uv add gatectr-sdk
 ```
 
-Nécessite Python 3.8+.
+Nécessite Python 3.9+.
 
 ## Initialisation
 
