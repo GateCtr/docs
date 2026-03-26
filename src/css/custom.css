@@ -1,4 +1,5 @@
 :root {
+  /* Brand colors — navy primary */
   --ifm-color-primary: #1B4F82;
   --ifm-color-primary-dark: #174470;
   --ifm-color-primary-darker: #143c66;
@@ -6,13 +7,19 @@
   --ifm-color-primary-light: #1f5a94;
   --ifm-color-primary-lighter: #2366a6;
   --ifm-color-primary-lightest: #2e7abf;
-  --ifm-code-font-size: 90%;
-  --docusaurus-highlighted-code-line-bg: rgba(27, 79, 130, 0.1);
+
+  /* Typography */
   --ifm-font-family-base: 'Inter', system-ui, -apple-system, sans-serif;
   --ifm-heading-font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  --ifm-font-family-monospace: 'JetBrains Mono', 'Courier New', monospace;
+  --ifm-code-font-size: 90%;
+
+  /* Code highlight */
+  --docusaurus-highlighted-code-line-bg: rgba(27, 79, 130, 0.1);
 }
 
 [data-theme='dark'] {
+  /* Brand colors — cyan primary in dark mode */
   --ifm-color-primary: #00B4C8;
   --ifm-color-primary-dark: #00a2b4;
   --ifm-color-primary-darker: #0096a8;
@@ -23,10 +30,29 @@
   --docusaurus-highlighted-code-line-bg: rgba(0, 180, 200, 0.15);
 }
 
+/* ── Heading typography — brand spec ────────────────────────────────────── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+}
+
+/* ── Code & pre — JetBrains Mono ────────────────────────────────────────── */
+code, pre, kbd, samp {
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-feature-settings: "liga" 0, "calt" 0;
+}
+
+code {
+  border-radius: 4px;
+}
+
+/* ── Navbar ─────────────────────────────────────────────────────────────── */
 .navbar__logo img {
   height: 28px;
 }
 
+/* ── Hero section ───────────────────────────────────────────────────────── */
 .hero--primary {
   background: linear-gradient(135deg, #1B4F82 0%, #0f2d4d 100%);
 }
@@ -34,13 +60,16 @@
 .hero__title {
   font-size: 3rem;
   font-weight: 800;
+  letter-spacing: -0.025em;
 }
 
 .hero__subtitle {
   font-size: 1.2rem;
   opacity: 0.85;
+  font-weight: 400;
 }
 
+/* ── Feature cards ──────────────────────────────────────────────────────── */
 .feature-card {
   border-radius: 12px;
   border: 1px solid var(--ifm-color-emphasis-200);
@@ -53,10 +82,7 @@
   box-shadow: 0 0 0 1px var(--ifm-color-primary);
 }
 
-code {
-  border-radius: 4px;
-}
-
+/* ── Table of contents ──────────────────────────────────────────────────── */
 .table-of-contents__link--active {
   color: var(--ifm-color-primary);
   font-weight: 600;
