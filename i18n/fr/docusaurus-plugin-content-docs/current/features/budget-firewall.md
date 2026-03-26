@@ -11,16 +11,16 @@ import TabItem from '@theme/TabItem';
 
 # Pare-feu Budgétaire
 
-Des plafonds stricts par projet. Plus de factures surprises.
+Plafonds stricts par projet. Plus de factures surprises.
 
 ## Comment ça fonctionne
 
-Chaque requête passe par le Pare-feu Budgétaire avant d'atteindre le LLM. Si le budget du projet est dépassé, la requête est bloquée et un `429` est retourné immédiatement. Aucun token consommé. Aucun coût engagé.
+Chaque requête passe par le Pare-feu Budgétaire avant d'atteindre le LLM. Si le budget du projet est dépassé, la requête est bloquée et un `429` est retourné immédiatement. Aucun token n'est consommé. Aucun coût n'est engagé.
 
 ```
-Requête → Vérification du Pare-feu Budgétaire
-  ├─ Sous la limite → transmission au LLM → réponse
-  └─ Au-dessus     → 429 Budget Dépassé (aucun appel LLM effectué)
+Requête → Vérification Pare-feu Budgétaire
+  ├─ En dessous de la limite → envoi au LLM → réponse
+  └─ Au-dessus de la limite → 429 Budget Dépassé (aucun appel LLM)
 ```
 
 ## Définir un budget
@@ -29,7 +29,7 @@ Requête → Vérification du Pare-feu Budgétaire
 
 Allez dans **Projets → Votre projet → Budget** dans le [tableau de bord GateCtr](https://app.gatectr.com).
 
-### Via API
+### Via l'API
 
 ```bash
 curl -X PATCH https://api.gatectr.com/v1/budget \
@@ -38,57 +38,18 @@ curl -X PATCH https://api.gatectr.com/v1/budget \
   -d '{
     "project_id": "proj_123",
     "limit_tokens": 100000,
-    "period": "day",
-    "alert_at_percent": 80
+    "period": "day"
   }'
 ```
-
-### Via SDK
-
-<Tabs>
-  <TabItem value="nodejs" label="Node.js" default>
-
-```typescript
-import { GateCtr } from '@gatectr/sdk';
-
-const client = new GateCtr({ apiKey: process.env.GATECTR_API_KEY });
-
-await client.budget.set({
-  projectId: 'proj_123',
-  limitTokens: 100000,
-  period: 'day',
-  alertAtPercent: 80,
-});
-```
-
-  </TabItem>
-  <TabItem value="python" label="Python">
-
-```python
-import os
-from gatectr import GateCtr
-
-client = GateCtr(api_key=os.environ["GATECTR_API_KEY"])
-
-client.budget.set(
-    project_id="proj_123",
-    limit_tokens=100000,
-    period="day",
-    alert_at_percent=80,
-)
-```
-
-  </TabItem>
-</Tabs>
 
 ## Types de budget
 
 | Type | Champ | Description |
 |------|-------|-------------|
-| Plafond en tokens | `limit_tokens` | Plafond sur le total de tokens (prompt + completion) |
-| Plafond en coût | `limit_cost_usd` | Plafond sur le coût estimé en USD |
+| Plafond de tokens | `limit_tokens` | Plafond sur le total des tokens (prompt + completion) |
+| Plafond de coût | `limit_cost_usd` | Plafond sur le coût estimé en USD |
 
-Vous pouvez définir les deux — celui qui est atteint en premier déclenche le blocage.
+Vous pouvez définir les deux — le premier atteint déclenche le blocage.
 
 ```json
 {
@@ -107,9 +68,9 @@ Vous pouvez définir les deux — celui qui est atteint en premier déclenche le
 | `month` | Plafond mensuel | 1er du mois, minuit UTC |
 | `total` | Plafond à vie | Jamais — doit être réinitialisé manuellement |
 
-## Alertes préventives
+## Alertes douces
 
-Définissez un seuil pour recevoir un webhook avant d'atteindre le plafond strict :
+Définissez un seuil pour recevoir un webhook avant d'atteindre le plafond dur :
 
 ```json
 {
@@ -120,13 +81,13 @@ Définissez un seuil pour recevoir un webhook avant d'atteindre le plafond stric
 }
 ```
 
-À 80% d'utilisation (80 000 tokens), GateCtr déclenche un événement webhook `budget.threshold_reached`. Le blocage strict s'effectue toujours à 100%.
+À 80% d'utilisation (80 000 tokens), GateCtr déclenche un webhook `budget.threshold_reached`. Le blocage dur se produit toujours à 100%.
 
-Consultez [Webhooks](./webhooks.md) pour configurer où les alertes sont envoyées.
+Voir [Webhooks](./webhooks.md) pour configurer où les alertes sont livrées.
 
 ## Remplacer le budget par requête
 
-Utilisez `gatectr.budget_id` pour appliquer un budget différent à une requête spécifique :
+Utilisez `budgetId` pour appliquer un budget différent à une requête spécifique :
 
 <Tabs>
   <TabItem value="nodejs" label="Node.js" default>
@@ -136,7 +97,7 @@ const response = await client.complete({
   model: 'gpt-4o',
   messages,
   gatectr: {
-    budget_id: 'proj_456',   // utiliser le budget d'un autre projet
+    budgetId: 'proj_456',   // utiliser le budget d'un autre projet
   },
 });
 ```
@@ -145,17 +106,19 @@ const response = await client.complete({
   <TabItem value="python" label="Python">
 
 ```python
-response = client.complete(
+from gatectr.types import PerRequestOptions
+
+response = await client.complete(
     model="gpt-4o",
     messages=messages,
-    gatectr={"budget_id": "proj_456"},
+    gatectr=PerRequestOptions(budget_id="proj_456"),
 )
 ```
 
   </TabItem>
 </Tabs>
 
-## Réponse en cas de blocage
+## Réponse de requête bloquée
 
 Quand une requête est bloquée par le Pare-feu Budgétaire, GateCtr retourne :
 
@@ -166,29 +129,24 @@ Quand une requête est bloquée par le Pare-feu Budgétaire, GateCtr retourne :
   "error": {
     "type": "budget_exceeded",
     "message": "Requête bloquée. Limite budgétaire atteinte.",
-    "request_id": "req_xyz789",
-    "project_id": "proj_123",
-    "limit": 100000,
-    "used": 100012,
-    "period": "day",
-    "resets_at": "2025-01-02T00:00:00Z"
+    "request_id": "req_xyz789"
   }
 }
 ```
 
-### Gérer l'erreur dans le code
+### Gérer dans le code
 
 <Tabs>
   <TabItem value="nodejs" label="Node.js" default>
 
 ```typescript
-import { BudgetExceededError } from '@gatectr/sdk';
+import { GateCtrApiError } from '@gatectr/sdk';
 
 try {
   const response = await client.complete({ model: 'gpt-4o', messages });
 } catch (err) {
-  if (err instanceof BudgetExceededError) {
-    console.warn(`Budget dépassé. Réinitialisation à : ${err.resetsAt}`);
+  if (err instanceof GateCtrApiError && err.code === 'budget_exceeded') {
+    console.warn(`Budget dépassé. ID de requête : ${err.requestId}`);
     // Notifier l'équipe, mettre la requête en file d'attente, etc.
   }
 }
@@ -198,13 +156,14 @@ try {
   <TabItem value="python" label="Python">
 
 ```python
-from gatectr.exceptions import BudgetExceededError
+from gatectr import GateCtrApiError
 
 try:
-    response = client.complete(model="gpt-4o", messages=messages)
-except BudgetExceededError as e:
-    print(f"Budget dépassé. Réinitialisation à : {e.resets_at}")
-    # Notifier l'équipe, mettre la requête en file d'attente, etc.
+    response = await client.complete(model="gpt-4o", messages=messages)
+except GateCtrApiError as e:
+    if e.code == "budget_exceeded":
+        print(f"Budget dépassé. ID de requête : {e.request_id}")
+        # Notifier l'équipe, mettre la requête en file d'attente, etc.
 ```
 
   </TabItem>
@@ -213,12 +172,23 @@ except BudgetExceededError as e:
 ## Vérifier l'utilisation actuelle
 
 ```bash
-curl "https://api.gatectr.com/v1/usage?project_id=proj_123" \
+curl "https://api.gatectr.com/v1/usage?projectId=proj_123" \
   -H "Authorization: Bearer $GATECTR_API_KEY"
 ```
 
-La réponse inclut `total_tokens` et `total_cost_usd` pour suivre votre proximité de la limite.
+La réponse inclut `totalTokens` et `totalCostUsd` pour suivre votre proximité à la limite.
+
+## Événements Webhook
+
+GateCtr déclenche ces événements webhook pour l'activité budgétaire :
+
+| Événement | Déclencheur |
+|-----------|-------------|
+| `budget.threshold_reached` | L'utilisation a dépassé le seuil d'alerte configuré (ex. 80%) |
+| `budget.exceeded` | Plafond dur atteint — les requêtes sont maintenant bloquées |
+
+Voir [Webhooks](./webhooks.md) pour les instructions de configuration et les détails des payloads.
 
 ## Disponible sur
 
-Forfait gratuit et supérieur.
+Forfait Free et supérieur.

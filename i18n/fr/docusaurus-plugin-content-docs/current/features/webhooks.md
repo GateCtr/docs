@@ -40,7 +40,7 @@ Recevez des notifications en temps réel sur n'importe quel endpoint HTTPS lorsq
 
 | Événement | Déclenché quand |
 |-----------|-----------------|
-| `budget.threshold` | Les dépenses franchissent un seuil configuré |
+| `budget.threshold_reached` | Les dépenses franchissent un seuil configuré |
 | `budget.exceeded` | Le plafond strict du budget est atteint — requêtes bloquées |
 | `budget.reset` | La période budgétaire se réinitialise (cron quotidien/mensuel) |
 

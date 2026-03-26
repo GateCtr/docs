@@ -64,12 +64,13 @@ const response = await client.complete({
   messages: [{ role: 'user', content: 'Hello' }],
 });
 
-console.log(response.choices[0].message.content);
+console.log(response.choices[0].text);
 // → "Hello! How can I help you today?"
 
 // GateCtr metadata on every response
-console.log(response.gatectr.tokens_saved);  // tokens saved by optimizer
-console.log(response.gatectr.cost_usd);      // estimated cost in USD
+console.log(response.gatectr.tokensSaved);  // tokens saved by optimizer
+console.log(response.gatectr.modelUsed);    // model that handled the request
+console.log(response.gatectr.latencyMs);    // end-to-end latency
 ```
 
   </TabItem>
@@ -81,17 +82,18 @@ from gatectr import GateCtr
 
 client = GateCtr(api_key=os.environ["GATECTR_API_KEY"])
 
-response = client.complete(
+response = await client.complete(
     model="gpt-4o",
     messages=[{"role": "user", "content": "Hello"}],
 )
 
-print(response.choices[0].message.content)
+print(response.choices[0].text)
 # → "Hello! How can I help you today?"
 
 # GateCtr metadata on every response
-print(response.gatectr["tokens_saved"])  # tokens saved by optimizer
-print(response.gatectr["cost_usd"])      # estimated cost in USD
+print(response.gatectr.tokens_saved)  # tokens saved by optimizer
+print(response.gatectr.model_used)    # model that handled the request
+print(response.gatectr.latency_ms)    # end-to-end latency
 ```
 
   </TabItem>

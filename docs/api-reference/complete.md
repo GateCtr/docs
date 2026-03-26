@@ -1,14 +1,14 @@
 ---
 id: complete
 title: POST /v1/complete
-description: API reference for the GateCtr /v1/complete endpoint — send chat completion requests through the LLM gateway with optimization, routing, and budget enforcement.
-keywords: [API reference, complete endpoint, chat completion, LLM API, OpenAI compatible]
+description: API reference for the GateCtr /v1/complete endpoint — send text completion requests through the LLM gateway with optimization, routing, and budget enforcement.
+keywords: [API reference, complete endpoint, text completion, LLM API, OpenAI compatible]
 sidebar_label: POST /v1/complete
 ---
 
 # POST /v1/complete
 
-Send a completion request through GateCtr.
+Send a text completion request through GateCtr.
 
 ## Endpoint
 
@@ -22,7 +22,6 @@ POST https://api.gatectr.com/v1/complete
 |--------|-------|----------|
 | `Authorization` | `Bearer <your-api-key>` | Yes |
 | `Content-Type` | `application/json` | Yes |
-| `X-GateCtr-Version` | API version (e.g. `2025-01-01`) | No |
 
 ## Request body
 
@@ -35,16 +34,10 @@ POST https://api.gatectr.com/v1/complete
   ],
   "temperature": 0.7,
   "max_tokens": 1024,
-  "top_p": 1.0,
-  "frequency_penalty": 0.0,
-  "presence_penalty": 0.0,
-  "stop": null,
   "stream": false,
-  "gatectr": {
-    "optimize": true,
-    "route": false,
-    "budget_id": "proj_123"
-  }
+  "optimize": true,
+  "route": false,
+  "budgetId": "proj_123"
 }
 ```
 
@@ -58,88 +51,80 @@ POST https://api.gatectr.com/v1/complete
 | `messages[].content` | `string` | Yes | — | Message content |
 | `temperature` | `number` | No | `1.0` | Sampling temperature (0–2). Higher = more random |
 | `max_tokens` | `number` | No | model default | Maximum completion tokens to generate |
-| `top_p` | `number` | No | `1.0` | Nucleus sampling probability mass (0–1) |
-| `frequency_penalty` | `number` | No | `0.0` | Penalize new tokens based on frequency (-2 to 2) |
-| `presence_penalty` | `number` | No | `0.0` | Penalize new tokens based on presence (-2 to 2) |
-| `stop` | `string \| array` | No | `null` | Sequences where generation will stop |
 | `stream` | `boolean` | No | `false` | Enable streaming via server-sent events |
-| `gatectr.optimize` | `boolean` | No | `true` | Enable Context Optimizer (Pro+) |
-| `gatectr.route` | `boolean` | No | `false` | Enable Model Router (Pro+) |
-| `gatectr.budget_id` | `string` | No | — | Override the active project budget |
+| `optimize` | `boolean` | No | `true` | Enable Context Optimizer (Pro+) |
+| `route` | `boolean` | No | `false` | Enable Model Router (Pro+) |
+| `budgetId` | `string` | No | — | Override the active project budget |
 
 ## Response
 
 ```json
 {
-  "id": "chatcmpl-abc123",
-  "object": "chat.completion",
-  "created": 1710000000,
+  "id": "cmpl-abc123",
+  "object": "text_completion",
   "model": "gpt-4o",
   "choices": [
     {
-      "index": 0,
-      "message": {
-        "role": "assistant",
-        "content": "Hello! How can I help you?"
-      },
+      "text": "Hello! How can I help you?",
       "finish_reason": "stop"
     }
   ],
   "usage": {
     "prompt_tokens": 12,
     "completion_tokens": 9,
-    "total_tokens": 21
-  },
-  "gatectr": {
-    "optimized": true,
-    "original_tokens": 20,
-    "tokens_saved": 8,
-    "compression_ratio": 0.40,
-    "model_used": "gpt-4o",
-    "model_requested": "gpt-4o",
-    "routing_reason": null,
-    "cost_usd": 0.00021
+    "total_tokens": 21,
+    "saved_tokens": 8
   }
 }
 ```
+
+### Response headers
+
+GateCtr sets these headers on every response:
+
+| Header | Description |
+|--------|-------------|
+| `X-GateCtr-Request-Id` | Unique request ID — use for support tickets |
+| `X-GateCtr-Latency-Ms` | End-to-end latency measured by GateCtr |
+| `X-GateCtr-Overage` | `"true"` if this request exceeded your budget cap |
 
 ### Response fields
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | `string` | Unique completion ID |
-| `object` | `string` | Always `"chat.completion"` |
-| `created` | `number` | Unix timestamp of the request |
+| `object` | `string` | Always `"text_completion"` |
 | `model` | `string` | Model that generated the response |
-| `choices[].index` | `number` | Choice index (always `0` currently) |
-| `choices[].message.role` | `string` | Always `"assistant"` |
-| `choices[].message.content` | `string` | The completion text |
+| `choices[].text` | `string` | The completion text |
 | `choices[].finish_reason` | `string` | `"stop"`, `"length"`, or `"content_filter"` |
 | `usage.prompt_tokens` | `number` | Tokens in the request (after optimization) |
 | `usage.completion_tokens` | `number` | Tokens in the completion |
 | `usage.total_tokens` | `number` | Sum of prompt and completion tokens |
-| `gatectr.optimized` | `boolean` | Whether Context Optimizer ran |
-| `gatectr.original_tokens` | `number` | Token count before optimization |
-| `gatectr.tokens_saved` | `number` | Tokens removed by Context Optimizer |
-| `gatectr.compression_ratio` | `number` | Fraction of tokens saved (0–1) |
-| `gatectr.model_used` | `string` | Model that actually handled the request |
-| `gatectr.model_requested` | `string` | Model you specified in the request |
-| `gatectr.routing_reason` | `string \| null` | Why the Model Router chose this model |
-| `gatectr.cost_usd` | `number` | Estimated cost of this request in USD |
+| `usage.saved_tokens` | `number` | Tokens saved by Context Optimizer |
+
+### SDK `gatectr` metadata
+
+When using the GateCtr SDK, the response object also exposes a `gatectr` field assembled from the response headers and body:
+
+```typescript
+response.gatectr.requestId    // from X-GateCtr-Request-Id header
+response.gatectr.latencyMs    // from X-GateCtr-Latency-Ms header
+response.gatectr.overage      // from X-GateCtr-Overage header
+response.gatectr.modelUsed    // from response body's model field
+response.gatectr.tokensSaved  // from response body's usage.saved_tokens
+```
 
 ## Streaming
 
-When `stream: true`, GateCtr returns server-sent events (SSE). Each chunk has the same shape as a non-streaming response but with `choices[].delta` instead of `choices[].message`:
+When `stream: true`, GateCtr returns server-sent events (SSE). Each chunk yields a `StreamChunk`:
 
 ```
-data: {"id":"chatcmpl-abc123","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"Hello"},"finish_reason":null}]}
+data: {"id":"cmpl-abc123","delta":"Hello","finishReason":null}
 
-data: {"id":"chatcmpl-abc123","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"!"},"finish_reason":"stop"}],"gatectr":{"tokens_saved":8,"cost_usd":0.00021}}
+data: {"id":"cmpl-abc123","delta":"!","finishReason":"stop"}
 
 data: [DONE]
 ```
-
-The `gatectr` metadata is included in the final chunk before `[DONE]`.
 
 ## Rate limit headers
 
@@ -168,10 +153,7 @@ The `gatectr` metadata is included in the final chunk before `[DONE]`.
   "error": {
     "type": "budget_exceeded",
     "message": "Request blocked. Budget limit reached.",
-    "request_id": "req_xyz789",
-    "project_id": "proj_123",
-    "limit": 100000,
-    "used": 100012
+    "request_id": "req_xyz789"
   }
 }
 ```
@@ -189,7 +171,7 @@ curl https://api.gatectr.com/v1/complete \
     "messages": [
       { "role": "user", "content": "What is the capital of France?" }
     ],
-    "gatectr": { "optimize": true }
+    "optimize": true
   }'
 ```
 
@@ -206,7 +188,7 @@ const response = await client.complete({
   gatectr: { optimize: true },
 });
 
-console.log(response.choices[0].message.content);
+console.log(response.choices[0].text);
 ```
 
 ### Python
@@ -217,11 +199,10 @@ from gatectr import GateCtr
 
 client = GateCtr(api_key=os.environ["GATECTR_API_KEY"])
 
-response = client.complete(
+response = await client.complete(
     model="gpt-4o",
     messages=[{"role": "user", "content": "What is the capital of France?"}],
-    gatectr={"optimize": True},
 )
 
-print(response.choices[0].message.content)
+print(response.choices[0].text)
 ```

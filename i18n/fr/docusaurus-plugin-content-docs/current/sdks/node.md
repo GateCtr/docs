@@ -34,13 +34,12 @@ const client = new GateCtr({
 
 | Option | Type | Requis | Défaut | Description |
 |--------|------|--------|--------|-------------|
-| `apiKey` | `string` | Oui | — | Votre clé API GateCtr (`gct_live_…` ou `gct_test_…`) |
-| `baseURL` | `string` | Non | `https://api.gatectr.com/v1` | Remplacer l'URL de base de l'API |
+| `apiKey` | `string` | Oui | — | Votre clé API GateCtr (`gct_live_…` ou `gct_test_…`). Utilise `GATECTR_API_KEY` par défaut |
+| `baseUrl` | `string` | Non | `https://api.gatectr.com/v1` | Remplacer l'URL de base de l'API |
 | `timeout` | `number` | Non | `30000` | Délai d'expiration en millisecondes |
-| `maxRetries` | `number` | Non | `2` | Nombre de tentatives automatiques sur erreurs transitoires |
+| `maxRetries` | `number` | Non | `3` | Nombre de tentatives automatiques sur erreurs transitoires |
 | `route` | `boolean` | Non | `false` | Activer le Routeur de Modèles globalement |
 | `optimize` | `boolean` | Non | `true` | Activer l'Optimiseur de Contexte globalement (Pro+) |
-| `defaultHeaders` | `Record<string, string>` | Non | `{}` | En-têtes HTTP supplémentaires ajoutés à chaque requête |
 
 ```typescript
 const client = new GateCtr({
@@ -54,7 +53,7 @@ const client = new GateCtr({
 
 ## `client.complete()`
 
-Envoyez une requête de completion via GateCtr.
+Completion de texte — POST /complete.
 
 ```typescript
 const response = await client.complete({
@@ -68,62 +67,92 @@ const response = await client.complete({
   gatectr: {
     optimize: true,          // activer l'Optimiseur de Contexte (défaut: true, Pro+)
     route: false,            // activer le Routeur de Modèles (défaut: false, Pro+)
-    budget_id: 'proj_123',   // remplacer le budget du projet
+    budgetId: 'proj_123',    // remplacer le budget du projet
   },
 });
 
-console.log(response.choices[0].message.content);
-console.log(response.gatectr.tokens_saved);   // tokens économisés par l'optimiseur
-console.log(response.gatectr.cost_usd);       // coût estimé en USD
+console.log(response.choices[0].text);
+console.log(response.gatectr.tokensSaved);  // tokens économisés par l'optimiseur
+console.log(response.gatectr.modelUsed);    // modèle qui a traité la requête
 ```
 
-### Response type
+### Type de réponse
 
 ```typescript
-interface GateCtrResponse {
+interface CompleteResponse {
   id: string;
-  object: string;
-  created: number;
+  object: 'text_completion';
   model: string;
-  choices: {
-    index: number;
-    message: { role: string; content: string };
+  choices: Array<{
+    text: string;
     finish_reason: 'stop' | 'length' | 'content_filter';
-  }[];
+  }>;
   usage: {
     prompt_tokens: number;
     completion_tokens: number;
     total_tokens: number;
   };
-  gatectr: {
-    optimized: boolean;
-    original_tokens: number;
-    tokens_saved: number;
-    compression_ratio: number;
-    model_used: string;
-    model_requested: string;
-    routing_reason: string | null;
-    cost_usd: number;
+  gatectr: GateCtrMetadata;
+}
+
+interface GateCtrMetadata {
+  requestId: string;    // ID unique de la requête — pour les tickets de support
+  latencyMs: number;    // latence bout-en-bout mesurée par GateCtr
+  overage: boolean;     // vrai si la requête a dépassé le plafond budgétaire
+  modelUsed: string;    // modèle réellement utilisé
+  tokensSaved: number;  // tokens économisés par l'Optimiseur de Contexte (0 si désactivé)
+}
+```
+
+## `client.chat()`
+
+Completion de chat — POST /chat. Retourne les messages au format `choices[].message`.
+
+```typescript
+const response = await client.chat({
+  model: 'gpt-4o',
+  messages: [
+    { role: 'system', content: 'Vous êtes un assistant utile.' },
+    { role: 'user', content: 'Quelle est la capitale de la France ?' },
+  ],
+  max_tokens: 1024,
+});
+
+console.log(response.choices[0].message.content);
+console.log(response.choices[0].message.role);   // "assistant"
+```
+
+### Type de réponse
+
+```typescript
+interface ChatResponse {
+  id: string;
+  object: 'chat.completion';
+  model: string;
+  choices: Array<{
+    message: { role: 'system' | 'user' | 'assistant'; content: string };
+    finish_reason: string;
+  }>;
+  usage: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
   };
+  gatectr: GateCtrMetadata;
 }
 ```
 
 ## `client.stream()`
 
-Recevez les réponses en streaming chunk par chunk.
+Streaming de chat — POST /chat avec `stream: true`. Retourne un `AsyncIterable<StreamChunk>`.
 
 ```typescript
-const stream = await client.stream({
+for await (const chunk of client.stream({
   model: 'gpt-4o',
   messages: [{ role: 'user', content: 'Écris un haïku sur le code.' }],
-});
-
-for await (const chunk of stream) {
+})) {
   process.stdout.write(chunk.delta ?? '');
 }
-
-const finalUsage = stream.usage();
-console.log(`Tokens économisés : ${finalUsage.gatectr.tokens_saved}`);
 ```
 
 ### Streaming avec annulation
@@ -131,105 +160,180 @@ console.log(`Tokens économisés : ${finalUsage.gatectr.tokens_saved}`);
 ```typescript
 const controller = new AbortController();
 
-const stream = await client.stream(
-  { model: 'gpt-4o', messages },
-  { signal: controller.signal },
-);
+// Annuler après 5 secondes
+setTimeout(() => controller.abort(), 5000);
 
-for await (const chunk of stream) {
+for await (const chunk of client.stream({
+  model: 'gpt-4o',
+  messages,
+  signal: controller.signal,
+})) {
   process.stdout.write(chunk.delta ?? '');
-  if (someCondition) controller.abort();
+}
+```
+
+### Type de chunk
+
+```typescript
+interface StreamChunk {
+  id: string;
+  delta: string | null;         // texte incrémental, null sur le chunk final
+  finishReason: string | null;  // non-null sur le chunk final
+}
+```
+
+## `client.models()`
+
+Liste les modèles disponibles — GET /models.
+
+```typescript
+const { models } = await client.models();
+
+for (const m of models) {
+  console.log(m.modelId, m.displayName, m.provider);
+  console.log('Fenêtre de contexte :', m.contextWindow);
+  console.log('Capacités :', m.capabilities);
+}
+```
+
+### Type de réponse
+
+```typescript
+interface ModelsResponse {
+  models: Array<{
+    modelId: string;
+    displayName: string;
+    provider: string;
+    contextWindow: number;
+    capabilities: string[];
+  }>;
+  requestId: string;
 }
 ```
 
 ## `client.usage()`
 
-Interrogez les statistiques d'utilisation des tokens et de coûts.
+Interrogez les statistiques d'utilisation — GET /usage.
 
 ```typescript
 const usage = await client.usage({
-  projectId: 'proj_123',
-  from: '2025-01-01',
-  to: '2025-01-31',
-  groupBy: 'model',
+  projectId: 'proj_123',   // optionnel : filtrer par ID de projet
+  from: '2025-01-01',      // optionnel : date de début (YYYY-MM-DD)
+  to: '2025-01-31',        // optionnel : date de fin (YYYY-MM-DD)
 });
 
-console.log(usage.total_tokens);
-console.log(usage.total_cost_usd);
+console.log(usage.totalTokens);
+console.log(usage.totalCostUsd);
+console.log(usage.savedTokens);
+console.log(usage.byProject);    // détail par projet
+```
+
+### Type de réponse
+
+```typescript
+interface UsageResponse {
+  totalTokens: number;
+  totalRequests: number;
+  totalCostUsd: number;
+  savedTokens: number;
+  from: string;
+  to: string;
+  byProject: Array<{
+    projectId: string | null;
+    totalTokens: number;
+    totalRequests: number;
+    totalCostUsd: number;
+  }>;
+  budgetStatus?: Record<string, unknown>;
+}
 ```
 
 ## TypeScript types
 
+Tous les types publics sont exportés depuis `@gatectr/sdk` :
+
 ```typescript
 import type {
-  GateCtrOptions,
+  GateCtrConfig,
+  PerRequestOptions,
+  Message,
+  GateCtrMetadata,
   CompleteParams,
-  GateCtrResponse,
+  CompleteResponse,
+  ChatParams,
+  ChatResponse,
+  StreamParams,
   StreamChunk,
-  GateCtrMeta,
+  ModelInfo,
+  ModelsResponse,
+  UsageParams,
+  UsageByProject,
+  UsageResponse,
 } from '@gatectr/sdk';
 ```
 
-| Type | Description |
-|------|-------------|
-| `GateCtrOptions` | Options du constructeur |
-| `CompleteParams` | Paramètres de `client.complete()` |
-| `GateCtrResponse` | Objet de réponse retourné par `complete()` |
-| `StreamChunk` | Chunk individuel retourné par `stream()` |
-| `GateCtrMeta` | Champ `gatectr` dans la réponse (tokens, coût, routage) |
-
 ## Gestion des erreurs
+
+Le SDK lève des erreurs typées que vous pouvez attraper et gérer :
 
 ```typescript
 import {
   GateCtrError,
-  AuthenticationError,
-  BudgetExceededError,
-  ValidationError,
-  ProviderError,
+  GateCtrApiError,
+  GateCtrConfigError,
+  GateCtrTimeoutError,
+  GateCtrStreamError,
+  GateCtrNetworkError,
 } from '@gatectr/sdk';
 
 try {
   const response = await client.complete({ model: 'gpt-4o', messages });
 } catch (err) {
-  if (err instanceof AuthenticationError) {
-    // HTTP 401 — clé API invalide ou manquante
-    console.error('Vérifiez votre GATECTR_API_KEY');
-  } else if (err instanceof BudgetExceededError) {
-    // HTTP 429 — limite budgétaire du projet atteinte
-    console.error(`Budget dépassé pour le projet : ${err.projectId}`);
-    console.error(`Limite : ${err.limit}, Utilisé : ${err.used}`);
-  } else if (err instanceof ValidationError) {
-    // HTTP 422 — paramètres de requête invalides
-    console.error('Requête invalide :', err.message);
-  } else if (err instanceof ProviderError) {
-    // HTTP 502 — le fournisseur LLM a renvoyé une erreur
-    console.error('Erreur fournisseur :', err.provider, err.message);
+  if (err instanceof GateCtrApiError) {
+    if (err.code === 'budget_exceeded') {
+      // HTTP 429 — limite budgétaire du projet atteinte
+      console.error(`Budget dépassé (requestId : ${err.requestId})`);
+    } else if (err.status === 401) {
+      // HTTP 401 — clé API invalide ou manquante
+      console.error('Vérifiez votre GATECTR_API_KEY');
+    } else {
+      console.error(`Erreur API ${err.status} : ${err.code} — ${err.message}`);
+    }
+  } else if (err instanceof GateCtrConfigError) {
+    // Erreur de configuration (ex. clé API manquante)
+    console.error('Erreur de config :', err.message);
+  } else if (err instanceof GateCtrTimeoutError) {
+    console.error(`Délai dépassé après ${err.timeoutMs}ms`);
+  } else if (err instanceof GateCtrStreamError) {
+    console.error('Échec du stream :', err.message);
+  } else if (err instanceof GateCtrNetworkError) {
+    console.error('Erreur réseau (DNS, connexion refusée) :', err.message);
   } else if (err instanceof GateCtrError) {
-    console.error(`Erreur GateCtr ${err.status} :`, err.message);
+    console.error('Erreur GateCtr :', err.message);
   }
 }
 ```
 
-### Error properties
+### Classes d'erreur
 
 ```typescript
-class GateCtrError extends Error {
-  status: number;        // code de statut HTTP
-  code: string;          // code d'erreur lisible par machine
-  requestId: string;     // ID de requête pour le support
+class GateCtrError extends Error {}
+
+class GateCtrConfigError extends GateCtrError {}  // config invalide (ex. pas de clé API)
+
+class GateCtrApiError extends GateCtrError {
+  status: number;          // code de statut HTTP
+  code: string;            // code d'erreur lisible par machine (ex. "budget_exceeded")
+  requestId: string | undefined;  // ID de requête pour le support
 }
 
-class BudgetExceededError extends GateCtrError {
-  projectId: string;
-  limit: number;
-  used: number;
-  period: 'day' | 'month' | 'total';
+class GateCtrTimeoutError extends GateCtrError {
+  timeoutMs: number;       // délai configuré en ms
 }
 
-class ProviderError extends GateCtrError {
-  provider: string;      // ex. "openai", "anthropic"
-}
+class GateCtrStreamError extends GateCtrError {}  // échec du stream
+
+class GateCtrNetworkError extends GateCtrError {} // DNS, connexion refusée
 ```
 
 ## Configuration des tentatives
@@ -239,18 +343,13 @@ Le SDK réessaie automatiquement en cas d'erreurs `429` (limite de débit) et `5
 ```typescript
 const client = new GateCtr({
   apiKey: process.env.GATECTR_API_KEY,
-  maxRetries: 3,   // défaut: 2. Mettez 0 pour désactiver
-});
-
-// Remplacer par requête
-const response = await client.complete({
-  model: 'gpt-4o',
-  messages,
-  maxRetries: 0,   // aucune tentative pour cette requête
+  maxRetries: 3,   // défaut : 3. Mettez 0 pour désactiver les tentatives
 });
 ```
 
 ## Remplacement du SDK OpenAI
+
+Pointez votre SDK OpenAI existant vers GateCtr — aucune autre modification :
 
 ```typescript
 import OpenAI from 'openai';
@@ -274,10 +373,11 @@ GateCtr injecte l'optimisation, le routage et l'application du budget de manièr
 Des exemples complets sont disponibles dans le [dépôt d'exemples GateCtr](https://github.com/GateCtr/examples) :
 
 - Completion basique
+- Completions de chat
 - Streaming avec annulation
 - Applications avec contrôle budgétaire
-- Gestionnaire de webhooks (Next.js, Express)
-- Pipelines RAG avec optimisation de contexte
+- Routage multi-modèles
+- Intégration Next.js
 
 ## Référence complète
 

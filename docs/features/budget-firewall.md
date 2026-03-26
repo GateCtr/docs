@@ -42,44 +42,6 @@ curl -X PATCH https://api.gatectr.com/v1/budget \
   }'
 ```
 
-### Via SDK
-
-<Tabs>
-  <TabItem value="nodejs" label="Node.js" default>
-
-```typescript
-import { GateCtr } from '@gatectr/sdk';
-
-const client = new GateCtr({ apiKey: process.env.GATECTR_API_KEY });
-
-await client.budget.set({
-  projectId: 'proj_123',
-  limitTokens: 100000,
-  period: 'day',
-  alertAtPercent: 80,
-});
-```
-
-  </TabItem>
-  <TabItem value="python" label="Python">
-
-```python
-import os
-from gatectr import GateCtr
-
-client = GateCtr(api_key=os.environ["GATECTR_API_KEY"])
-
-client.budget.set(
-    project_id="proj_123",
-    limit_tokens=100000,
-    period="day",
-    alert_at_percent=80,
-)
-```
-
-  </TabItem>
-</Tabs>
-
 ## Budget types
 
 | Type | Field | Description |
@@ -125,7 +87,7 @@ See [Webhooks](./webhooks.md) to configure where alerts are delivered.
 
 ## Override budget per request
 
-Use `gatectr.budget_id` to apply a different budget to a specific request:
+Use `gatectr.budgetId` to apply a different budget to a specific request:
 
 <Tabs>
   <TabItem value="nodejs" label="Node.js" default>
@@ -135,7 +97,7 @@ const response = await client.complete({
   model: 'gpt-4o',
   messages,
   gatectr: {
-    budget_id: 'proj_456',   // use a different project's budget
+    budgetId: 'proj_456',   // use a different project's budget
   },
 });
 ```
@@ -144,10 +106,12 @@ const response = await client.complete({
   <TabItem value="python" label="Python">
 
 ```python
-response = client.complete(
+from gatectr.types import PerRequestOptions
+
+response = await client.complete(
     model="gpt-4o",
     messages=messages,
-    gatectr={"budget_id": "proj_456"},
+    gatectr=PerRequestOptions(budget_id="proj_456"),
 )
 ```
 
@@ -165,12 +129,7 @@ When a request is blocked by the Budget Firewall, GateCtr returns:
   "error": {
     "type": "budget_exceeded",
     "message": "Request blocked. Budget limit reached.",
-    "request_id": "req_xyz789",
-    "project_id": "proj_123",
-    "limit": 100000,
-    "used": 100012,
-    "period": "day",
-    "resets_at": "2025-01-02T00:00:00Z"
+    "request_id": "req_xyz789"
   }
 }
 ```
@@ -181,13 +140,13 @@ When a request is blocked by the Budget Firewall, GateCtr returns:
   <TabItem value="nodejs" label="Node.js" default>
 
 ```typescript
-import { BudgetExceededError } from '@gatectr/sdk';
+import { GateCtrApiError } from '@gatectr/sdk';
 
 try {
   const response = await client.complete({ model: 'gpt-4o', messages });
 } catch (err) {
-  if (err instanceof BudgetExceededError) {
-    console.warn(`Budget exceeded. Resets at: ${err.resetsAt}`);
+  if (err instanceof GateCtrApiError && err.code === 'budget_exceeded') {
+    console.warn(`Budget exceeded. Request ID: ${err.requestId}`);
     // Notify team, queue request for later, etc.
   }
 }
@@ -197,13 +156,14 @@ try {
   <TabItem value="python" label="Python">
 
 ```python
-from gatectr.exceptions import BudgetExceededError
+from gatectr import GateCtrApiError
 
 try:
-    response = client.complete(model="gpt-4o", messages=messages)
-except BudgetExceededError as e:
-    print(f"Budget exceeded. Resets at: {e.resets_at}")
-    # Notify team, queue request for later, etc.
+    response = await client.complete(model="gpt-4o", messages=messages)
+except GateCtrApiError as e:
+    if e.code == "budget_exceeded":
+        print(f"Budget exceeded. Request ID: {e.request_id}")
+        # Notify team, queue request for later, etc.
 ```
 
   </TabItem>
@@ -212,11 +172,22 @@ except BudgetExceededError as e:
 ## Check current usage
 
 ```bash
-curl "https://api.gatectr.com/v1/usage?project_id=proj_123" \
+curl "https://api.gatectr.com/v1/usage?projectId=proj_123" \
   -H "Authorization: Bearer $GATECTR_API_KEY"
 ```
 
-Response includes `total_tokens` and `total_cost_usd` so you can track how close you are to the limit.
+Response includes `totalTokens` and `totalCostUsd` so you can track how close you are to the limit.
+
+## Webhook events
+
+GateCtr fires these webhook events for budget activity:
+
+| Event | Trigger |
+|-------|---------|
+| `budget.threshold_reached` | Usage crossed the configured alert threshold (e.g. 80%) |
+| `budget.exceeded` | Hard cap hit — requests are now being blocked |
+
+See [Webhooks](./webhooks.md) for setup instructions and payload details.
 
 ## Available on
 

@@ -42,8 +42,7 @@ const response = await client.complete({
   messages: [{ role: 'user', content: 'What is 2 + 2?' }],
 });
 
-console.log(response.gatectr.model_used);      // e.g. "gpt-3.5-turbo"
-console.log(response.gatectr.routing_reason);  // e.g. "low_complexity"
+console.log(response.gatectr.modelUsed);  // e.g. "gpt-3.5-turbo"
 ```
 
   </TabItem>
@@ -55,13 +54,12 @@ from gatectr import GateCtr
 
 client = GateCtr(api_key=os.environ["GATECTR_API_KEY"])
 
-response = client.complete(
+response = await client.complete(
     model="auto",   # triggers the Model Router
     messages=[{"role": "user", "content": "What is 2 + 2?"}],
 )
 
-print(response.gatectr["model_used"])      # e.g. "gpt-3.5-turbo"
-print(response.gatectr["routing_reason"])  # e.g. "low_complexity"
+print(response.gatectr.model_used)  # e.g. "gpt-3.5-turbo"
 ```
 
   </TabItem>
@@ -97,10 +95,12 @@ const response = await client.complete({
   <TabItem value="python" label="Python">
 
 ```python
-response = client.complete(
+from gatectr.types import PerRequestOptions
+
+response = await client.complete(
     model="gpt-4o",       # your preference, Router may override
     messages=messages,
-    gatectr={"route": True},
+    gatectr=PerRequestOptions(route=True),
 )
 ```
 
@@ -158,37 +158,40 @@ You can:
 - **Cost threshold** — never route to a model above a given price per 1M tokens
 - **Latency mode** — prefer faster models even if slightly more expensive
 
-## Response fields
+## Response metadata
 
-The `gatectr` field includes routing metadata:
+After routing, `response.gatectr.modelUsed` tells you which model actually handled the request:
 
-```json
-{
-  "gatectr": {
-    "model_used": "gpt-3.5-turbo",
-    "model_requested": "auto",
-    "routing_reason": "low_complexity",
-    "cost_usd": 0.00008
-  }
-}
+<Tabs>
+  <TabItem value="nodejs" label="Node.js" default>
+
+```typescript
+const response = await client.complete({
+  model: 'auto',
+  messages: [{ role: 'user', content: 'What is 2 + 2?' }],
+});
+
+console.log(response.gatectr.modelUsed);  // e.g. "gpt-3.5-turbo"
+console.log(response.gatectr.tokensSaved);
+console.log(response.gatectr.latencyMs);
 ```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `model_used` | `string` | The model that actually handled the request |
-| `model_requested` | `string` | The model you specified (`"auto"` or a specific model) |
-| `routing_reason` | `string` | Why the Router chose this model |
-| `cost_usd` | `number` | Estimated cost in USD |
+  </TabItem>
+  <TabItem value="python" label="Python">
 
-### Routing reason values
+```python
+response = await client.complete(
+    model="auto",
+    messages=[{"role": "user", "content": "What is 2 + 2?"}],
+)
 
-| Value | Description |
-|-------|-------------|
-| `low_complexity` | Simple request, cheaper model selected |
-| `high_complexity` | Complex reasoning required, premium model selected |
-| `provider_preference` | Your allow/block configuration influenced the choice |
-| `cost_threshold` | Routing stayed under your configured cost limit |
-| `latency_mode` | Faster model selected based on latency preference |
+print(response.gatectr.model_used)    # e.g. "gpt-3.5-turbo"
+print(response.gatectr.tokens_saved)
+print(response.gatectr.latency_ms)
+```
+
+  </TabItem>
+</Tabs>
 
 ## Combine with Context Optimizer
 
@@ -205,9 +208,8 @@ const response = await client.complete({
 });
 
 // Both savings stack
-console.log(response.gatectr.tokens_saved);  // optimizer savings
-console.log(response.gatectr.model_used);    // router selection
-console.log(response.gatectr.cost_usd);      // total optimized cost
+console.log(response.gatectr.tokensSaved);  // optimizer savings
+console.log(response.gatectr.modelUsed);    // router selection
 ```
 
 ## Available on

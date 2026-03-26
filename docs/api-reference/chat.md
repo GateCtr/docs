@@ -1,20 +1,21 @@
 ---
 id: chat
-title: POST /v1/chat/completions
-description: GateCtr's /v1/chat/completions endpoint is a drop-in alias for /v1/complete, fully compatible with the OpenAI SDK — no code changes needed.
+title: POST /v1/chat
+description: GateCtr's /v1/chat endpoint for chat completions, and /v1/chat/completions as a drop-in alias fully compatible with the OpenAI SDK.
 keywords: [chat completions, OpenAI compatible, drop-in replacement, API reference]
 sidebar_label: POST /v1/chat
 ---
 
-# POST /v1/chat/completions
+# POST /v1/chat
 
-Alias for `/v1/complete`. Identical behavior, provided for OpenAI SDK compatibility.
+Chat completion endpoint. Returns responses in the `choices[].message` format.
 
-## Endpoint
+## Endpoints
 
-```
-POST https://api.gatectr.com/v1/chat/completions
-```
+| Path | Description |
+|------|-------------|
+| `POST https://api.gatectr.com/v1/chat` | Native GateCtr chat endpoint (used by `client.chat()` and `client.stream()`) |
+| `POST https://api.gatectr.com/v1/chat/completions` | OpenAI-compatible alias for existing OpenAI SDK integrations |
 
 ## Headers
 
@@ -23,11 +24,40 @@ POST https://api.gatectr.com/v1/chat/completions
 | `Authorization` | `Bearer <your-api-key>` | Yes |
 | `Content-Type` | `application/json` | Yes |
 
-## Request body and response
+## Request body
 
-Same request body and response shape as [POST /v1/complete](complete.md). All parameters (`model`, `messages`, `temperature`, `max_tokens`, `stream`, `gatectr.*`, etc.) are accepted identically.
+Same parameters as [POST /v1/complete](complete.md): `model`, `messages`, `temperature`, `max_tokens`, `stream`, `optimize`, `route`, `budgetId`.
 
-## When to use
+## Response
+
+```json
+{
+  "id": "chat-abc123",
+  "object": "chat.completion",
+  "model": "gpt-4o",
+  "choices": [
+    {
+      "message": {
+        "role": "assistant",
+        "content": "Hello! How can I help you?"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 12,
+    "completion_tokens": 9,
+    "total_tokens": 21,
+    "saved_tokens": 8
+  }
+}
+```
+
+### Response headers
+
+Same as [POST /v1/complete](complete.md): `X-GateCtr-Request-Id`, `X-GateCtr-Latency-Ms`, `X-GateCtr-Overage`.
+
+## Using the OpenAI-compatible alias
 
 Use `/v1/chat/completions` when pointing an existing OpenAI SDK integration at GateCtr without changing any code:
 
@@ -48,7 +78,6 @@ const response = await client.chat.completions.create({
 });
 
 console.log(response.choices[0].message.content);
-// The gatectr field is present in the response alongside standard OpenAI fields
 ```
 
 ### Python
@@ -84,7 +113,33 @@ llm = ChatOpenAI(
 )
 ```
 
-GateCtr injects optimization, routing, and budget enforcement transparently. The `gatectr` field appears in the response alongside the standard OpenAI fields.
+GateCtr injects optimization, routing, and budget enforcement transparently.
+
+## Using the native GateCtr SDK
+
+When using the GateCtr SDK directly:
+
+```typescript
+import { GateCtr } from '@gatectr/sdk';
+
+const client = new GateCtr({ apiKey: process.env.GATECTR_API_KEY });
+
+// client.chat() → POST /v1/chat (non-streaming)
+const response = await client.chat({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Hello' }],
+});
+
+console.log(response.choices[0].message.content);
+
+// client.stream() → POST /v1/chat with stream: true
+for await (const chunk of client.stream({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Hello' }],
+})) {
+  process.stdout.write(chunk.delta ?? '');
+}
+```
 
 ## Rate limit headers
 

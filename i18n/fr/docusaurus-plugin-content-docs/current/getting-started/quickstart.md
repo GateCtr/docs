@@ -11,13 +11,13 @@ import TabItem from '@theme/TabItem';
 
 # Démarrage rapide
 
-Opérationnel en 5 min. Aucune modification de code requise.
+Opérationnel en 5 min. Aucune modification de code nécessaire.
 
 ## 1. Obtenez votre clé API
 
-Créez un compte sur [gatectr.com](https://gatectr.com) et récupérez votre clé API depuis le [tableau de bord](https://app.gatectr.com).
+Inscrivez-vous sur [gatectr.com](https://gatectr.com) et récupérez votre clé API depuis le [tableau de bord](https://app.gatectr.com).
 
-Votre clé ressemblera à `gct_live_xxxxxxxxxxxx`. Stockez-la dans une variable d'environnement — ne la commitez jamais dans votre code source.
+Votre clé ressemblera à `gct_live_xxxxxxxxxxxx`. Stockez-la dans une variable d'environnement — ne la committez jamais dans votre code source.
 
 ```bash
 export GATECTR_API_KEY="gct_live_xxxxxxxxxxxx"
@@ -49,7 +49,7 @@ Aucune installation nécessaire.
   </TabItem>
 </Tabs>
 
-## 3. Effectuez votre première requête
+## 3. Faites votre première requête
 
 <Tabs>
   <TabItem value="nodejs" label="Node.js" default>
@@ -64,12 +64,13 @@ const response = await client.complete({
   messages: [{ role: 'user', content: 'Bonjour' }],
 });
 
-console.log(response.choices[0].message.content);
+console.log(response.choices[0].text);
 // → "Bonjour ! Comment puis-je vous aider ?"
 
 // Métadonnées GateCtr sur chaque réponse
-console.log(response.gatectr.tokens_saved);  // tokens économisés par l'optimiseur
-console.log(response.gatectr.cost_usd);      // coût estimé en USD
+console.log(response.gatectr.tokensSaved);  // tokens économisés par l'optimiseur
+console.log(response.gatectr.modelUsed);    // modèle qui a traité la requête
+console.log(response.gatectr.latencyMs);    // latence bout-en-bout
 ```
 
   </TabItem>
@@ -81,17 +82,18 @@ from gatectr import GateCtr
 
 client = GateCtr(api_key=os.environ["GATECTR_API_KEY"])
 
-response = client.complete(
+response = await client.complete(
     model="gpt-4o",
     messages=[{"role": "user", "content": "Bonjour"}],
 )
 
-print(response.choices[0].message.content)
+print(response.choices[0].text)
 # → "Bonjour ! Comment puis-je vous aider ?"
 
 # Métadonnées GateCtr sur chaque réponse
-print(response.gatectr["tokens_saved"])  # tokens économisés par l'optimiseur
-print(response.gatectr["cost_usd"])      # coût estimé en USD
+print(response.gatectr.tokens_saved)  # tokens économisés par l'optimiseur
+print(response.gatectr.model_used)    # modèle qui a traité la requête
+print(response.gatectr.latency_ms)    # latence bout-en-bout
 ```
 
   </TabItem>
@@ -110,11 +112,11 @@ curl https://api.gatectr.com/v1/complete \
   </TabItem>
 </Tabs>
 
-C'est tout. GateCtr optimise, route et trace maintenant chaque requête.
+C'est tout. GateCtr optimise, route et suit maintenant chaque requête.
 
-## 4. Remplacement pour OpenAI (optionnel)
+## 4. Remplacement OpenAI (optionnel)
 
-Vous utilisez déjà le SDK OpenAI ? Pointez-le vers GateCtr — sans autres modifications :
+Vous utilisez déjà le SDK OpenAI ? Pointez-le vers GateCtr — aucune autre modification :
 
 <Tabs>
   <TabItem value="nodejs" label="Node.js" default>

@@ -11,19 +11,19 @@ import TabItem from '@theme/TabItem';
 
 # Optimiseur de Contexte
 
-Compresse vos prompts. -40% de tokens. Même qualité de sortie.
+Compresse vos prompts. -40% de tokens. Même qualité de réponse.
 
 ## Comment ça fonctionne
 
 Avant de transmettre votre requête au LLM, GateCtr analyse et compresse le prompt :
 
-- Supprime les espaces redondants et les phrases de remplissage
-- Condense les instructions verboses sans changer l'intention
-- Réduit l'historique des conversations aux tours les plus pertinents
+- Supprime les espaces superflus et les phrases de remplissage
+- Condense les instructions verbeuses sans changer l'intention
+- Tronque l'historique de conversation aux échanges les plus pertinents
 - Déduplique le contexte répété entre les messages
-- Préserve tout le sens sémantique et les blocs de code
+- Préserve toute la sémantique et les blocs de code
 
-Réduction moyenne : **-40% de tokens**. La qualité des sorties est maintenue.
+Réduction moyenne : **-40% de tokens**. La qualité des réponses est maintenue.
 
 ## Activer
 
@@ -45,8 +45,8 @@ const response = await client.complete({
   gatectr: { optimize: true },
 });
 
-console.log(`Tokens économisés : ${response.gatectr.tokens_saved}`);
-console.log(`Taux de compression : ${response.gatectr.compression_ratio}`);
+console.log(`Tokens économisés : ${response.gatectr.tokensSaved}`);
+console.log(`Modèle utilisé : ${response.gatectr.modelUsed}`);
 ```
 
   </TabItem>
@@ -55,17 +55,18 @@ console.log(`Taux de compression : ${response.gatectr.compression_ratio}`);
 ```python
 import os
 from gatectr import GateCtr
+from gatectr.types import PerRequestOptions
 
 client = GateCtr(api_key=os.environ["GATECTR_API_KEY"])
 
-response = client.complete(
+response = await client.complete(
     model="gpt-4o",
     messages=messages,
-    gatectr={"optimize": True},
+    gatectr=PerRequestOptions(optimize=True),
 )
 
-print(f"Tokens économisés : {response.gatectr['tokens_saved']}")
-print(f"Taux de compression : {response.gatectr['compression_ratio']}")
+print(f"Tokens économisés : {response.gatectr.tokens_saved}")
+print(f"Modèle utilisé : {response.gatectr.model_used}")
 ```
 
   </TabItem>
@@ -81,7 +82,7 @@ curl https://api.gatectr.com/v1/complete \
       { "role": "system", "content": "Vous êtes un assistant utile." },
       { "role": "user", "content": "Résumez le texte suivant..." }
     ],
-    "gatectr": { "optimize": true }
+    "optimize": true
   }'
 ```
 
@@ -90,7 +91,7 @@ curl https://api.gatectr.com/v1/complete \
 
 ## Activer globalement
 
-Activez l'optimisation pour toutes les requêtes lors de l'initialisation du client :
+Activez l'optimisation pour toutes les requêtes par défaut lors de l'initialisation du client :
 
 <Tabs>
   <TabItem value="nodejs" label="Node.js" default>
@@ -98,7 +99,7 @@ Activez l'optimisation pour toutes les requêtes lors de l'initialisation du cli
 ```typescript
 const client = new GateCtr({
   apiKey: process.env.GATECTR_API_KEY,
-  optimize: true,   // appliqué à toutes les requêtes
+  optimize: true,   // appliqué à toutes les requêtes (c'est la valeur par défaut)
 });
 ```
 
@@ -111,38 +112,55 @@ from gatectr import GateCtr
 
 client = GateCtr(
     api_key=os.environ["GATECTR_API_KEY"],
-    optimize=True,   # appliqué à toutes les requêtes
+    optimize=True,   # appliqué à toutes les requêtes (c'est la valeur par défaut)
 )
 ```
 
   </TabItem>
 </Tabs>
 
-## Champs de réponse
+## Métadonnées de la réponse
 
-Le champ `gatectr` dans chaque réponse contient les métadonnées d'optimisation :
+Chaque réponse GateCtr inclut un champ `gatectr` avec des métadonnées sur la requête :
 
-```json
-{
-  "gatectr": {
-    "optimized": true,
-    "original_tokens": 800,
-    "tokens_saved": 320,
-    "compression_ratio": 0.40,
-    "model_used": "gpt-4o",
-    "cost_usd": 0.00384
-  }
-}
+<Tabs>
+  <TabItem value="nodejs" label="Node.js" default>
+
+```typescript
+const response = await client.complete({ model: 'gpt-4o', messages });
+
+console.log(response.gatectr.tokensSaved);  // tokens supprimés par l'optimiseur
+console.log(response.gatectr.modelUsed);    // modèle qui a traité la requête
+console.log(response.gatectr.latencyMs);    // latence bout-en-bout
+console.log(response.gatectr.overage);      // true si le plafond budgétaire a été dépassé
+console.log(response.gatectr.requestId);    // ID unique de cette requête
 ```
 
-| Champ | Type | Description |
-|-------|------|-------------|
-| `optimized` | `boolean` | Si l'Optimiseur de Contexte s'est exécuté |
-| `original_tokens` | `number` | Nombre de tokens du prompt original |
-| `tokens_saved` | `number` | Tokens supprimés par l'optimiseur |
-| `compression_ratio` | `number` | Part des tokens économisés (ex. `0.40` = 40%) |
-| `model_used` | `string` | Modèle ayant traité la requête |
-| `cost_usd` | `number` | Coût estimé (après économies d'optimisation) |
+  </TabItem>
+  <TabItem value="python" label="Python">
+
+```python
+response = await client.complete(model="gpt-4o", messages=messages)
+
+print(response.gatectr.tokens_saved)  # tokens supprimés par l'optimiseur
+print(response.gatectr.model_used)    # modèle qui a traité la requête
+print(response.gatectr.latency_ms)    # latence bout-en-bout
+print(response.gatectr.overage)       # True si le plafond budgétaire a été dépassé
+print(response.gatectr.request_id)    # ID unique de cette requête
+```
+
+  </TabItem>
+</Tabs>
+
+### Champs de `GateCtrMetadata`
+
+| Champ (Node.js) | Champ (Python) | Type | Description |
+|-----------------|----------------|------|-------------|
+| `requestId` | `request_id` | `string` | ID unique de la requête — pour les tickets de support |
+| `latencyMs` | `latency_ms` | `number` | Latence bout-en-bout mesurée par GateCtr |
+| `overage` | `overage` | `boolean` | Si la requête a dépassé votre plafond budgétaire |
+| `modelUsed` | `model_used` | `string` | Modèle réel qui a traité la requête |
+| `tokensSaved` | `tokens_saved` | `number` | Tokens supprimés par l'Optimiseur de Contexte (0 si désactivé) |
 
 ## Désactiver pour une requête spécifique
 
@@ -158,20 +176,20 @@ Désactivez l'optimisation pour les requêtes où la précision du prompt est cr
 
 - Sortie structurée (mode JSON, appel de fonctions)
 - Génération de code nécessitant un formatage exact
-- Requêtes avec des exemples few-shot soigneusement ajustés
+- Requêtes avec des exemples few-shot soigneusement calibrés
 - Requêtes où vous avez déjà minimisé le prompt vous-même
 
 ## Exemple d'économies réelles
 
-Une application RAG typique avec :
+Une application RAG (retrieval-augmented generation) typique avec :
 - Prompt système : 500 tokens
 - Contexte récupéré : 2000 tokens
 - Historique de conversation : 800 tokens
-- Question utilisateur : 50 tokens
+- Requête utilisateur : 50 tokens
 
 **Avant optimisation :** 3 350 tokens → **Après :** ~2 010 tokens → **Économies : ~0,04 $ par requête**
 
-À 10 000 requêtes/jour, cela représente **~400 $/jour** d'économies.
+À 10 000 requêtes/jour, c'est **~400 $/jour** d'économies.
 
 ## Disponible sur
 

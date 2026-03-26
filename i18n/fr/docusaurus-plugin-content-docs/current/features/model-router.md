@@ -17,13 +17,13 @@ GateCtr choisit le bon LLM pour chaque requête. Vous payez moins.
 
 Quand le routage est activé, GateCtr évalue chaque requête selon un ensemble de critères et sélectionne le modèle optimal :
 
-- **Complexité de la tâche** — simple Q&R vs. raisonnement multi-étapes
+- **Complexité de la tâche** — Q&R simple vs. raisonnement multi-étapes
 - **Exigences de sortie** — longueur, format et qualité attendue
-- **Prix actuels des modèles** — coût par token en temps réel par fournisseur
-- **Vos préférences de fournisseur configurées** — autoriser/bloquer des modèles ou fournisseurs spécifiques
-- **Exigences de latence** — équilibre vitesse vs. qualité selon vos paramètres
+- **Prix actuels des modèles** — coût par token en temps réel chez les fournisseurs
+- **Vos préférences de fournisseur** — autoriser/bloquer des modèles ou fournisseurs spécifiques
+- **Exigences de latence** — équilibrer vitesse et qualité selon vos paramètres
 
-Les requêtes simples vont vers les modèles moins chers. Les complexes vers le meilleur modèle pour le travail.
+Les requêtes simples vont vers des modèles moins chers. Les complexes vont vers le meilleur modèle pour la tâche.
 
 ## Activer
 
@@ -42,8 +42,7 @@ const response = await client.complete({
   messages: [{ role: 'user', content: 'Combien font 2 + 2 ?' }],
 });
 
-console.log(response.gatectr.model_used);      // ex. "gpt-3.5-turbo"
-console.log(response.gatectr.routing_reason);  // ex. "low_complexity"
+console.log(response.gatectr.modelUsed);  // ex. "gpt-3.5-turbo"
 ```
 
   </TabItem>
@@ -55,13 +54,12 @@ from gatectr import GateCtr
 
 client = GateCtr(api_key=os.environ["GATECTR_API_KEY"])
 
-response = client.complete(
+response = await client.complete(
     model="auto",   # déclenche le Routeur de Modèles
     messages=[{"role": "user", "content": "Combien font 2 + 2 ?"}],
 )
 
-print(response.gatectr["model_used"])      # ex. "gpt-3.5-turbo"
-print(response.gatectr["routing_reason"])  # ex. "low_complexity"
+print(response.gatectr.model_used)  # ex. "gpt-3.5-turbo"
 ```
 
   </TabItem>
@@ -87,7 +85,7 @@ curl https://api.gatectr.com/v1/complete \
 
 ```typescript
 const response = await client.complete({
-  model: 'gpt-4o',        // votre préférence, le Routeur peut substituer
+  model: 'gpt-4o',        // votre préférence, le Routeur peut l'ignorer
   messages,
   gatectr: { route: true },
 });
@@ -97,10 +95,12 @@ const response = await client.complete({
   <TabItem value="python" label="Python">
 
 ```python
-response = client.complete(
-    model="gpt-4o",       # votre préférence, le Routeur peut substituer
+from gatectr.types import PerRequestOptions
+
+response = await client.complete(
+    model="gpt-4o",       # votre préférence, le Routeur peut l'ignorer
     messages=messages,
-    gatectr={"route": True},
+    gatectr=PerRequestOptions(route=True),
 )
 ```
 
@@ -139,11 +139,13 @@ client = GateCtr(
 
 | Type de requête | Sélection typique |
 |----------------|-------------------|
-| Q&R simple, tâches courtes | `gpt-3.5-turbo`, `mistral-small` |
+| Q&R simple, courtes tâches | `gpt-3.5-turbo`, `mistral-small` |
 | Résumé, classification | `gpt-4o-mini`, `claude-3-haiku` |
 | Raisonnement complexe, analyse | `gpt-4o`, `claude-3-5-sonnet` |
 | Génération de code, débogage | `gpt-4o`, `claude-3-5-sonnet` |
-| Rédaction longue | `gpt-4o`, `mistral-large` |
+| Rédaction longue forme | `gpt-4o`, `mistral-large` |
+
+Le routeur évalue la requête dynamiquement — le même message à des moments différents peut être routé différemment en fonction des prix actuels.
 
 ## Configurer les préférences de fournisseur
 
@@ -152,41 +154,44 @@ Dans le tableau de bord : **Paramètres → Routeur de Modèles**
 Vous pouvez :
 
 - **Liste d'autorisation** — restreindre le routage à des fournisseurs spécifiques (ex. OpenAI uniquement)
-- **Liste de blocage** — exclure des modèles spécifiques de la sélection
+- **Liste de blocage** — exclure des modèles spécifiques du routage
 - **Seuil de coût** — ne jamais router vers un modèle au-dessus d'un prix donné par million de tokens
-- **Mode latence** — préférer les modèles plus rapides même légèrement plus coûteux
+- **Mode latence** — préférer des modèles plus rapides même légèrement plus chers
 
-## Champs de réponse
+## Métadonnées de la réponse
 
-Le champ `gatectr` inclut les métadonnées de routage :
+Après le routage, `response.gatectr.modelUsed` vous indique quel modèle a réellement traité la requête :
 
-```json
-{
-  "gatectr": {
-    "model_used": "gpt-3.5-turbo",
-    "model_requested": "auto",
-    "routing_reason": "low_complexity",
-    "cost_usd": 0.00008
-  }
-}
+<Tabs>
+  <TabItem value="nodejs" label="Node.js" default>
+
+```typescript
+const response = await client.complete({
+  model: 'auto',
+  messages: [{ role: 'user', content: 'Combien font 2 + 2 ?' }],
+});
+
+console.log(response.gatectr.modelUsed);  // ex. "gpt-3.5-turbo"
+console.log(response.gatectr.tokensSaved);
+console.log(response.gatectr.latencyMs);
 ```
 
-| Champ | Type | Description |
-|-------|------|-------------|
-| `model_used` | `string` | Le modèle ayant réellement traité la requête |
-| `model_requested` | `string` | Le modèle spécifié dans la requête |
-| `routing_reason` | `string` | Raison du choix du Routeur |
-| `cost_usd` | `number` | Coût estimé en USD |
+  </TabItem>
+  <TabItem value="python" label="Python">
 
-### Valeurs de `routing_reason`
+```python
+response = await client.complete(
+    model="auto",
+    messages=[{"role": "user", "content": "Combien font 2 + 2 ?"}],
+)
 
-| Valeur | Description |
-|--------|-------------|
-| `low_complexity` | Requête simple, modèle moins cher sélectionné |
-| `high_complexity` | Raisonnement complexe requis, modèle premium sélectionné |
-| `provider_preference` | La configuration allow/block a influencé le choix |
-| `cost_threshold` | Le routage est resté sous votre limite de coût configurée |
-| `latency_mode` | Modèle plus rapide sélectionné selon la préférence de latence |
+print(response.gatectr.model_used)    # ex. "gpt-3.5-turbo"
+print(response.gatectr.tokens_saved)
+print(response.gatectr.latency_ms)
+```
+
+  </TabItem>
+</Tabs>
 
 ## Combiner avec l'Optimiseur de Contexte
 
@@ -202,10 +207,9 @@ const response = await client.complete({
   },
 });
 
-// Les deux économies s'additionnent
-console.log(response.gatectr.tokens_saved);  // économies de l'optimiseur
-console.log(response.gatectr.model_used);    // sélection du routeur
-console.log(response.gatectr.cost_usd);      // coût total optimisé
+// Les deux économies s'accumulent
+console.log(response.gatectr.tokensSaved);  // économies de l'optimiseur
+console.log(response.gatectr.modelUsed);    // sélection du routeur
 ```
 
 ## Disponible sur

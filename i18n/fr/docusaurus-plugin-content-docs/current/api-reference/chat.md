@@ -1,20 +1,29 @@
 ---
 id: chat
-title: POST /v1/chat/completions
-description: L'endpoint /v1/chat/completions de GateCtr est un alias compatible OpenAI pour /v1/complete — aucune modification de code nécessaire.
-keywords: [chat completions, compatible OpenAI, remplacement direct, référence API]
+title: POST /v1/chat
+description: Référence API pour l'endpoint GateCtr /v1/chat — chat completions avec rôles de messages, compatible avec les bibliothèques attendant une réponse de style message.
+keywords: [chat completions, compatible OpenAI, messages de chat, référence API]
 sidebar_label: POST /v1/chat
 ---
 
-# POST /v1/chat/completions
+# POST /v1/chat
 
-Alias pour `/v1/complete`. Comportement identique, fourni pour la compatibilité avec le SDK OpenAI.
+Completion de chat — retourne `choices[].message.role/content` au lieu de `choices[].text`.
 
 ## Endpoint
 
 ```
-POST https://api.gatectr.com/v1/chat/completions
+POST https://api.gatectr.com/v1/chat
 ```
+
+## Quand utiliser `/chat` vs `/complete`
+
+| Endpoint | Champ de la réponse | Cas d'usage |
+|----------|---------------------|-------------|
+| `POST /v1/complete` | `choices[].text` | Completion de texte brute ; Routeur de Modèles et Optimiseur de Contexte activés |
+| `POST /v1/chat` | `choices[].message.role/content` | Frameworks de chat ; bibliothèques qui inspectent `.message.content` |
+
+Les deux endpoints acceptent le même format de tableau `messages`.
 
 ## En-têtes
 
@@ -23,86 +32,133 @@ POST https://api.gatectr.com/v1/chat/completions
 | `Authorization` | `Bearer <votre-clé-api>` | Oui |
 | `Content-Type` | `application/json` | Oui |
 
-## Corps de la requête et réponse
+## Corps de la requête
 
-Même corps de requête et même format de réponse que [POST /v1/complete](complete.md). Tous les paramètres (`model`, `messages`, `temperature`, `max_tokens`, `stream`, `gatectr.*`, etc.) sont acceptés de manière identique.
+```json
+{
+  "model": "gpt-4o",
+  "messages": [
+    { "role": "system", "content": "Vous êtes un assistant utile." },
+    { "role": "user", "content": "Bonjour" }
+  ],
+  "temperature": 0.7,
+  "max_tokens": 1024,
+  "optimize": true,
+  "route": false,
+  "budgetId": "proj_123"
+}
+```
 
-## Quand l'utiliser
+Les paramètres sont identiques à ceux de [POST /v1/complete](./complete.md).
 
-Utilisez `/v1/chat/completions` quand vous pointez une intégration SDK OpenAI existante vers GateCtr sans modifier votre code :
+## Réponse
+
+```json
+{
+  "id": "chatcmpl-abc123",
+  "object": "chat.completion",
+  "model": "gpt-4o",
+  "choices": [
+    {
+      "message": {
+        "role": "assistant",
+        "content": "Bonjour ! Comment puis-je vous aider ?"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 12,
+    "completion_tokens": 9,
+    "total_tokens": 21,
+    "saved_tokens": 8
+  }
+}
+```
+
+### Champs de la réponse
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | ID unique de la completion |
+| `object` | `string` | Toujours `"chat.completion"` |
+| `model` | `string` | Modèle qui a généré la réponse |
+| `choices[].message.role` | `string` | Toujours `"assistant"` |
+| `choices[].message.content` | `string` | La réponse de l'assistant |
+| `choices[].finish_reason` | `string` | `"stop"`, `"length"`, ou `"content_filter"` |
+| `usage.prompt_tokens` | `number` | Tokens de la requête (après optimisation) |
+| `usage.completion_tokens` | `number` | Tokens de la completion |
+| `usage.total_tokens` | `number` | Somme des tokens de prompt et de completion |
+| `usage.saved_tokens` | `number` | Tokens économisés par l'Optimiseur de Contexte |
+
+## En-têtes de réponse
+
+GateCtr définit ces en-têtes sur chaque réponse :
+
+| En-tête | Description |
+|---------|-------------|
+| `X-GateCtr-Request-Id` | ID unique de la requête — pour les tickets de support |
+| `X-GateCtr-Latency-Ms` | Latence bout-en-bout mesurée par GateCtr |
+| `X-GateCtr-Overage` | `"true"` si la requête a dépassé le plafond budgétaire |
+
+## Exemples de requêtes
+
+### cURL
+
+```bash
+curl https://api.gatectr.com/v1/chat \
+  -H "Authorization: Bearer $GATECTR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-4o",
+    "messages": [
+      { "role": "user", "content": "Bonjour" }
+    ]
+  }'
+```
 
 ### Node.js
 
 ```typescript
-import OpenAI from 'openai';
+import { GateCtr } from '@gatectr/sdk';
 
-const client = new OpenAI({
-  apiKey: process.env.GATECTR_API_KEY,
-  baseURL: 'https://api.gatectr.com/v1',
-});
+const client = new GateCtr({ apiKey: process.env.GATECTR_API_KEY });
 
-// Ceci appelle /v1/chat/completions — aucun changement nécessaire
-const response = await client.chat.completions.create({
+const response = await client.chat({
   model: 'gpt-4o',
   messages: [{ role: 'user', content: 'Bonjour' }],
 });
 
 console.log(response.choices[0].message.content);
+console.log(response.choices[0].message.role);   // "assistant"
 ```
 
 ### Python
 
 ```python
 import os
-from openai import OpenAI
+from gatectr import GateCtr
 
-client = OpenAI(
-    api_key=os.environ["GATECTR_API_KEY"],
-    base_url="https://api.gatectr.com/v1",
-)
+client = GateCtr(api_key=os.environ["GATECTR_API_KEY"])
 
-# Ceci appelle /v1/chat/completions — aucun changement nécessaire
-response = client.chat.completions.create(
+response = await client.chat(
     model="gpt-4o",
     messages=[{"role": "user", "content": "Bonjour"}],
 )
 
 print(response.choices[0].message.content)
+print(response.choices[0].message.role)   # "assistant"
 ```
 
-### LangChain
+## Alias compatible OpenAI
 
-```python
-import os
-from langchain_openai import ChatOpenAI
+L'endpoint `/v1/chat/completions` est un alias pour `/v1/chat`, fourni pour la compatibilité avec les bibliothèques qui s'attendent à ce chemin :
 
-llm = ChatOpenAI(
-    api_key=os.environ["GATECTR_API_KEY"],
-    base_url="https://api.gatectr.com/v1",
-    model="gpt-4o",
-)
+```bash
+curl https://api.gatectr.com/v1/chat/completions \
+  -H "Authorization: Bearer $GATECTR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "model": "gpt-4o", "messages": [{ "role": "user", "content": "Bonjour" }] }'
 ```
 
-GateCtr injecte l'optimisation, le routage et l'application du budget de manière transparente. Le champ `gatectr` apparaît dans la réponse aux côtés des champs OpenAI standards.
-
-## En-têtes de limite de débit
-
-| En-tête | Description |
-|---------|-------------|
-| `X-RateLimit-Limit` | Requêtes autorisées par minute |
-| `X-RateLimit-Remaining` | Requêtes restantes dans la fenêtre actuelle |
-| `X-RateLimit-Reset` | Horodatage Unix de réinitialisation de la fenêtre |
-
-## Réponses d'erreur
-
-Mêmes codes d'erreur que [POST /v1/complete](complete.md) :
-
-| Statut | Type | Description |
-|--------|------|-------------|
-| `400` | `bad_request` | JSON malformé ou champs requis manquants |
-| `401` | `unauthorized` | Clé API invalide ou manquante |
-| `422` | `validation_error` | Valeurs de paramètres invalides |
-| `429` | `budget_exceeded` | Limite budgétaire du projet atteinte |
-| `429` | `rate_limit_exceeded` | Trop de requêtes — attendez et réessayez |
-| `502` | `provider_error` | Le fournisseur LLM a retourné une erreur |
-| `503` | `service_unavailable` | GateCtr temporairement indisponible |
+Voir la [référence complète de /v1/complete](./complete.md) pour la liste des paramètres et le comportement des erreurs.

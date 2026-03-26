@@ -36,10 +36,9 @@ client = GateCtr(api_key=os.environ["GATECTR_API_KEY"])
 | `api_key` | `str` | Oui | — | Votre clé API GateCtr (`gct_live_…` ou `gct_test_…`) |
 | `base_url` | `str` | Non | `https://api.gatectr.com/v1` | Remplacer l'URL de base |
 | `timeout` | `float` | Non | `30.0` | Délai d'expiration en secondes |
-| `max_retries` | `int` | Non | `2` | Nombre de tentatives automatiques |
+| `max_retries` | `int` | Non | `3` | Nombre de tentatives automatiques sur erreurs transitoires |
 | `route` | `bool` | Non | `False` | Activer le Routeur de Modèles globalement |
 | `optimize` | `bool` | Non | `True` | Activer l'Optimiseur de Contexte globalement (Pro+) |
-| `default_headers` | `dict` | Non | `{}` | En-têtes HTTP supplémentaires ajoutés à chaque requête |
 
 ```python
 import os
@@ -56,10 +55,12 @@ client = GateCtr(
 
 ## `client.complete()`
 
-Envoyez une requête de completion via GateCtr.
+Completion de texte — POST /complete.
 
 ```python
-response = client.complete(
+from gatectr.types import PerRequestOptions
+
+response = await client.complete(
     model="gpt-4o",        # nom du modèle ou "auto" pour le Routeur de Modèles
     messages=[
         {"role": "system", "content": "Vous êtes un assistant utile."},
@@ -67,16 +68,16 @@ response = client.complete(
     ],
     temperature=0.7,       # optionnel : température d'échantillonnage (0–2)
     max_tokens=1024,       # optionnel : tokens de completion maximum
-    gatectr={
-        "optimize": True,          # optionnel : activer l'Optimiseur de Contexte (défaut: True, Pro+)
-        "route": False,            # optionnel : activer le Routeur de Modèles (défaut: False, Pro+)
-        "budget_id": "proj_123",   # optionnel : remplacer le budget du projet
-    },
+    gatectr=PerRequestOptions(
+        optimize=True,         # optionnel : activer l'Optimiseur de Contexte (défaut: True, Pro+)
+        route=False,           # optionnel : activer le Routeur de Modèles (défaut: False, Pro+)
+        budget_id="proj_123",  # optionnel : remplacer le budget du projet
+    ),
 )
 
-print(response.choices[0].message.content)
-print(response.gatectr["tokens_saved"])   # tokens économisés par l'optimiseur
-print(response.gatectr["cost_usd"])       # coût estimé en USD
+print(response.choices[0].text)
+print(response.gatectr.tokens_saved)  # tokens économisés par l'optimiseur
+print(response.gatectr.model_used)    # modèle qui a traité la requête
 ```
 
 ### Champs de la réponse
@@ -84,69 +85,94 @@ print(response.gatectr["cost_usd"])       # coût estimé en USD
 | Champ | Type | Description |
 |-------|------|-------------|
 | `id` | `str` | ID de la completion |
+| `object` | `str` | Toujours `"text_completion"` |
 | `model` | `str` | Modèle utilisé |
-| `choices[].message.content` | `str` | Réponse de l'assistant |
+| `choices[].text` | `str` | Le texte de completion |
 | `choices[].finish_reason` | `str` | `"stop"`, `"length"`, ou `"content_filter"` |
 | `usage.prompt_tokens` | `int` | Tokens de prompt envoyés |
 | `usage.completion_tokens` | `int` | Tokens de completion reçus |
 | `usage.total_tokens` | `int` | Total des tokens |
-| `gatectr.optimized` | `bool` | Si l'Optimiseur de Contexte s'est exécuté |
-| `gatectr.original_tokens` | `int` | Nombre de tokens avant optimisation |
-| `gatectr.tokens_saved` | `int` | Tokens supprimés par l'optimiseur |
-| `gatectr.compression_ratio` | `float` | Part des tokens économisés |
-| `gatectr.model_used` | `str` | Modèle réellement utilisé |
-| `gatectr.cost_usd` | `float` | Coût estimé en USD |
+| `gatectr.request_id` | `str` | ID unique de la requête — pour les tickets de support |
+| `gatectr.latency_ms` | `int` | Latence bout-en-bout mesurée par GateCtr |
+| `gatectr.overage` | `bool` | Si la requête a dépassé le plafond budgétaire |
+| `gatectr.model_used` | `str` | Modèle réellement utilisé (peut différer si routé) |
+| `gatectr.tokens_saved` | `int` | Tokens économisés par l'Optimiseur de Contexte (0 si désactivé) |
+
+## `client.chat()`
+
+Completion de chat — POST /chat. Retourne les messages au format `choices[].message`.
+
+```python
+response = await client.chat(
+    model="gpt-4o",
+    messages=[
+        {"role": "system", "content": "Vous êtes un assistant utile."},
+        {"role": "user", "content": "Quelle est la capitale de la France ?"},
+    ],
+    max_tokens=1024,
+)
+
+print(response.choices[0].message.content)
+print(response.choices[0].message.role)   # "assistant"
+```
+
+### Champs de la réponse
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| `object` | `str` | Toujours `"chat.completion"` |
+| `choices[].message.role` | `str` | Toujours `"assistant"` |
+| `choices[].message.content` | `str` | La réponse de l'assistant |
+| `choices[].finish_reason` | `str` | `"stop"`, `"length"`, ou `"content_filter"` |
 
 ## `client.stream()`
 
-Recevez les réponses en streaming chunk par chunk.
+Streaming de chat — POST /chat avec `stream: true`. Retourne un itérateur asynchrone de `StreamChunk`.
 
 ```python
-for chunk in client.stream(
+async for chunk in client.stream(
     model="gpt-4o",
     messages=[{"role": "user", "content": "Écris un haïku sur le code."}],
 ):
     print(chunk.delta or "", end="", flush=True)
 ```
 
-### Stream avec gestionnaire de contexte
-
-```python
-import os
-from gatectr import GateCtr
-
-client = GateCtr(api_key=os.environ["GATECTR_API_KEY"])
-
-with client.stream(model="gpt-4o", messages=messages) as stream:
-    for chunk in stream:
-        print(chunk.delta or "", end="", flush=True)
-    # Accéder à l'utilisation finale après la fin du stream
-    final_usage = stream.get_final_usage()
-    print(f"\nTokens économisés : {final_usage.gatectr['tokens_saved']}")
-```
-
 ## Async support
 
-Utilisez `AsyncGateCtr` pour les workflows async/await :
+Utilisez `GateCtr` pour les workflows async/await ou `SyncGateCtr` pour une utilisation synchrone :
 
 ```python
 import asyncio
 import os
-from gatectr import AsyncGateCtr
+from gatectr import GateCtr
 
-client = AsyncGateCtr(api_key=os.environ["GATECTR_API_KEY"])
+client = GateCtr(api_key=os.environ["GATECTR_API_KEY"])
 
 async def main():
     response = await client.complete(
         model="gpt-4o",
         messages=[{"role": "user", "content": "Bonjour"}],
     )
-    print(response.choices[0].message.content)
+    print(response.choices[0].text)
 
 asyncio.run(main())
 ```
 
-### Async streaming
+### Client synchrone
+
+```python
+from gatectr import SyncGateCtr
+
+client = SyncGateCtr(api_key=os.environ["GATECTR_API_KEY"])
+
+response = client.complete(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Bonjour"}],
+)
+print(response.choices[0].text)
+```
+
+### Streaming async
 
 ```python
 async def stream_response():
@@ -154,72 +180,115 @@ async def stream_response():
         print(chunk.delta or "", end="", flush=True)
 ```
 
-## `client.usage()`
+## `client.models()`
 
-Interrogez les statistiques d'utilisation des tokens et de coûts.
+Liste les modèles disponibles — GET /models.
 
 ```python
-usage = client.usage(
-    project_id="proj_123",
-    from_date="2025-01-01",
-    to_date="2025-01-31",
-    group_by="model",    # optionnel: "model" | "day" | "project"
-)
+result = await client.models()
 
-print(usage["total_tokens"])
-print(usage["total_cost_usd"])
-print(usage["by_model"])
+for model in result.models:
+    print(model.model_id, model.display_name, model.provider)
+    print("Fenêtre de contexte :", model.context_window)
+    print("Capacités :", model.capabilities)
 ```
+
+## `client.usage()`
+
+Interrogez les statistiques d'utilisation — GET /usage.
+
+```python
+from gatectr.types import UsageParams
+
+usage = await client.usage(UsageParams(
+    project_id="proj_123",   # optionnel : filtrer par ID de projet
+    from_="2025-01-01",      # optionnel : date de début (YYYY-MM-DD)
+    to="2025-01-31",         # optionnel : date de fin (YYYY-MM-DD)
+))
+
+print(usage.total_tokens)
+print(usage.total_cost_usd)
+print(usage.saved_tokens)
+print(usage.by_project)     # détail par projet
+```
+
+### Champs de la réponse
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| `total_tokens` | `int` | Total des tokens utilisés dans la période |
+| `total_requests` | `int` | Nombre total de requêtes |
+| `total_cost_usd` | `float` | Coût total estimé en USD |
+| `saved_tokens` | `int` | Tokens supprimés par l'Optimiseur de Contexte |
+| `from_` | `str` | Début de la période interrogée |
+| `to` | `str` | Fin de la période interrogée |
+| `by_project` | `list` | Détail par projet |
+
+Chaque entrée dans `by_project` :
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| `project_id` | `str \| None` | ID du projet |
+| `total_tokens` | `int` | Tokens utilisés par ce projet |
+| `total_requests` | `int` | Requêtes de ce projet |
+| `total_cost_usd` | `float` | Coût de ce projet |
 
 ## Gestion des erreurs
 
 Le SDK lève des exceptions typées que vous pouvez attraper et gérer :
 
 ```python
-from gatectr.exceptions import (
+from gatectr import (
     GateCtrError,
-    AuthenticationError,
-    BudgetExceededError,
-    ValidationError,
-    ProviderError,
+    GateCtrApiError,
+    GateCtrConfigError,
+    GateCtrTimeoutError,
+    GateCtrStreamError,
+    GateCtrNetworkError,
 )
 
 try:
-    response = client.complete(model="gpt-4o", messages=messages)
-except AuthenticationError:
-    # HTTP 401 — clé API invalide ou manquante
-    print("Vérifiez votre GATECTR_API_KEY")
-except BudgetExceededError as e:
-    # HTTP 429 — limite budgétaire du projet atteinte
-    print(f"Budget dépassé pour le projet {e.project_id}")
-    print(f"Limite : {e.limit}, Utilisé : {e.used}")
-except ValidationError as e:
-    # HTTP 422 — paramètres de requête invalides
-    print(f"Requête invalide : {e}")
-except ProviderError as e:
-    # HTTP 502 — le fournisseur LLM a renvoyé une erreur
-    print(f"Erreur fournisseur ({e.provider}) : {e}")
+    response = await client.complete(model="gpt-4o", messages=messages)
+except GateCtrApiError as e:
+    if e.code == "budget_exceeded":
+        # HTTP 429 — limite budgétaire du projet atteinte
+        print(f"Budget dépassé (request_id : {e.request_id})")
+    elif e.status == 401:
+        # HTTP 401 — clé API invalide ou manquante
+        print("Vérifiez votre GATECTR_API_KEY")
+    else:
+        print(f"Erreur API {e.status} : {e.code} — {e}")
+except GateCtrConfigError as e:
+    # Erreur de configuration (ex. clé API manquante)
+    print(f"Erreur de config : {e}")
+except GateCtrTimeoutError as e:
+    print(f"Délai dépassé après {e.timeout_s}s")
+except GateCtrStreamError as e:
+    print(f"Échec du stream : {e}")
+except GateCtrNetworkError as e:
+    print(f"Erreur réseau (DNS, connexion refusée) : {e}")
 except GateCtrError as e:
-    # Erreur GateCtr générique
-    print(f"Erreur GateCtr {e.status} : {e}")
+    print(f"Erreur GateCtr : {e}")
 ```
 
 ### Attributs des exceptions
 
 ```python
-class GateCtrError(Exception):
-    status: int        # code de statut HTTP
-    code: str          # code d'erreur lisible par machine
-    request_id: str    # ID de requête pour le support
+class GateCtrError(Exception): ...
 
-class BudgetExceededError(GateCtrError):
-    project_id: str
-    limit: int
-    used: int
-    period: str        # "day", "month", ou "total"
+class GateCtrConfigError(GateCtrError): ...  # config invalide (ex. pas de clé API)
 
-class ProviderError(GateCtrError):
-    provider: str      # ex. "openai", "anthropic"
+class GateCtrApiError(GateCtrError):
+    status: int          # code de statut HTTP
+    code: str            # code d'erreur lisible par machine (ex. "budget_exceeded")
+    request_id: str | None  # ID de requête pour le support
+
+class GateCtrTimeoutError(GateCtrError):
+    timeout_s: float     # délai configuré en secondes
+
+class GateCtrStreamError(GateCtrError): ...  # échec du stream
+
+class GateCtrNetworkError(GateCtrError): ... # DNS, connexion refusée
 ```
 
 ## Configuration des tentatives
@@ -232,14 +301,7 @@ from gatectr import GateCtr
 
 client = GateCtr(
     api_key=os.environ["GATECTR_API_KEY"],
-    max_retries=3,   # défaut: 2. Mettez 0 pour désactiver les tentatives
-)
-
-# Remplacer par requête
-response = client.complete(
-    model="gpt-4o",
-    messages=messages,
-    max_retries=0,   # aucune tentative pour cette requête
+    max_retries=3,   # défaut : 3. Mettez 0 pour désactiver les tentatives
 )
 ```
 

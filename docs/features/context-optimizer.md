@@ -45,8 +45,8 @@ const response = await client.complete({
   gatectr: { optimize: true },
 });
 
-console.log(`Tokens saved: ${response.gatectr.tokens_saved}`);
-console.log(`Compression ratio: ${response.gatectr.compression_ratio}`);
+console.log(`Tokens saved: ${response.gatectr.tokensSaved}`);
+console.log(`Model used: ${response.gatectr.modelUsed}`);
 ```
 
   </TabItem>
@@ -55,17 +55,18 @@ console.log(`Compression ratio: ${response.gatectr.compression_ratio}`);
 ```python
 import os
 from gatectr import GateCtr
+from gatectr.types import PerRequestOptions
 
 client = GateCtr(api_key=os.environ["GATECTR_API_KEY"])
 
-response = client.complete(
+response = await client.complete(
     model="gpt-4o",
     messages=messages,
-    gatectr={"optimize": True},
+    gatectr=PerRequestOptions(optimize=True),
 )
 
-print(f"Tokens saved: {response.gatectr['tokens_saved']}")
-print(f"Compression ratio: {response.gatectr['compression_ratio']}")
+print(f"Tokens saved: {response.gatectr.tokens_saved}")
+print(f"Model used: {response.gatectr.model_used}")
 ```
 
   </TabItem>
@@ -81,7 +82,7 @@ curl https://api.gatectr.com/v1/complete \
       { "role": "system", "content": "You are a helpful assistant." },
       { "role": "user", "content": "Summarize the following text..." }
     ],
-    "gatectr": { "optimize": true }
+    "optimize": true
   }'
 ```
 
@@ -98,7 +99,7 @@ Enable optimization for all requests by default when initializing the client:
 ```typescript
 const client = new GateCtr({
   apiKey: process.env.GATECTR_API_KEY,
-  optimize: true,   // applied to all requests
+  optimize: true,   // applied to all requests (this is the default)
 });
 ```
 
@@ -111,38 +112,55 @@ from gatectr import GateCtr
 
 client = GateCtr(
     api_key=os.environ["GATECTR_API_KEY"],
-    optimize=True,   # applied to all requests
+    optimize=True,   # applied to all requests (this is the default)
 )
 ```
 
   </TabItem>
 </Tabs>
 
-## Response fields
+## Response metadata
 
-The `gatectr` field in every response contains optimization metadata:
+Every GateCtr response includes a `gatectr` field with metadata about the request:
 
-```json
-{
-  "gatectr": {
-    "optimized": true,
-    "original_tokens": 800,
-    "tokens_saved": 320,
-    "compression_ratio": 0.40,
-    "model_used": "gpt-4o",
-    "cost_usd": 0.00384
-  }
-}
+<Tabs>
+  <TabItem value="nodejs" label="Node.js" default>
+
+```typescript
+const response = await client.complete({ model: 'gpt-4o', messages });
+
+console.log(response.gatectr.tokensSaved);  // tokens removed by optimizer
+console.log(response.gatectr.modelUsed);    // model that handled the request
+console.log(response.gatectr.latencyMs);    // end-to-end latency
+console.log(response.gatectr.overage);      // true if budget cap was exceeded
+console.log(response.gatectr.requestId);    // unique ID for this request
 ```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `optimized` | `boolean` | Whether the Context Optimizer ran |
-| `original_tokens` | `number` | Token count of the original prompt |
-| `tokens_saved` | `number` | Tokens removed by the optimizer |
-| `compression_ratio` | `number` | Fraction of tokens saved (e.g. `0.40` = 40%) |
-| `model_used` | `string` | Model that handled the request |
-| `cost_usd` | `number` | Estimated cost (after optimization savings) |
+  </TabItem>
+  <TabItem value="python" label="Python">
+
+```python
+response = await client.complete(model="gpt-4o", messages=messages)
+
+print(response.gatectr.tokens_saved)  # tokens removed by optimizer
+print(response.gatectr.model_used)    # model that handled the request
+print(response.gatectr.latency_ms)    # end-to-end latency
+print(response.gatectr.overage)       # True if budget cap was exceeded
+print(response.gatectr.request_id)    # unique ID for this request
+```
+
+  </TabItem>
+</Tabs>
+
+### `GateCtrMetadata` fields
+
+| Field (Node.js) | Field (Python) | Type | Description |
+|-----------------|----------------|------|-------------|
+| `requestId` | `request_id` | `string` | Unique request ID — use for support tickets |
+| `latencyMs` | `latency_ms` | `number` | End-to-end latency measured by GateCtr |
+| `overage` | `overage` | `boolean` | Whether this request exceeded your budget cap |
+| `modelUsed` | `model_used` | `string` | Actual model that handled the request |
+| `tokensSaved` | `tokens_saved` | `number` | Tokens removed by Context Optimizer (0 if disabled) |
 
 ## Disable for a specific request
 
