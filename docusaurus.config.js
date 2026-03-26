@@ -152,6 +152,8 @@ const config = {
     ],
   ],
 
+  clientModules: [require.resolve('./src/clientModules/languageDetect.js')],
+
   plugins: [
     function allowedHostsPlugin() {
       return {
