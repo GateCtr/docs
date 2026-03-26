@@ -40,7 +40,7 @@
     "description": "Footer link: Status"
   },
   "copyright": {
-    "message": "Copyright © {year} GateCtr. Construit avec Docusaurus.",
+    "message": "Copyright © {year} GateCtr.",
     "description": "The footer copyright"
   }
 }

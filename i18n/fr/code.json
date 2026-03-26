@@ -4,15 +4,15 @@
     "description": "Hero title on homepage"
   },
   "home.hero.subtitle": {
-    "message": "GateCtr s'intercale entre votre application et n'importe quel fournisseur LLM. Un simple changement d'endpoint. Sans modifier votre code. Contrôle total sur les coûts, le routage et l'observabilité.",
+    "message": "Un changement d'endpoint. -40% de coûts. Sans toucher à votre code.",
     "description": "Hero subtitle on homepage"
   },
-  "home.hero.cta.quickstart": {
-    "message": "Démarrage rapide — 5 min ⚡",
+  "home.hero.cta.primary": {
+    "message": "Démarrer gratuitement",
     "description": "Primary CTA button"
   },
-  "home.hero.cta.api": {
-    "message": "Référence API",
+  "home.hero.cta.secondary": {
+    "message": "Voir la documentation",
     "description": "Secondary CTA button"
   },
   "home.meta.title": {
@@ -20,8 +20,56 @@
     "description": "Page title for SEO"
   },
   "home.meta.description": {
-    "message": "GateCtr est une passerelle LLM avec contrôle des coûts intégré, routage intelligent, compression des prompts et analytiques en temps réel.",
+    "message": "Un endpoint. Tous les LLMs. -40% de coûts sans modifier votre code. Contrôle budgétaire, routage intelligent et analytiques en temps réel.",
     "description": "Page description for SEO"
+  },
+  "home.feature.optimizer.title": {
+    "message": "-40% de tokens",
+    "description": "Feature card title: Context Optimizer"
+  },
+  "home.feature.optimizer.desc": {
+    "message": "Prompts compressés automatiquement. Même output. -40% de coût.",
+    "description": "Feature card description: Context Optimizer"
+  },
+  "home.feature.budget.title": {
+    "message": "Budget Firewall",
+    "description": "Feature card title: Budget Firewall"
+  },
+  "home.feature.budget.desc": {
+    "message": "Plafonds stricts par projet. Requêtes bloquées dès le dépassement.",
+    "description": "Feature card description: Budget Firewall"
+  },
+  "home.feature.router.title": {
+    "message": "Model Router",
+    "description": "Feature card title: Model Router"
+  },
+  "home.feature.router.desc": {
+    "message": "GateCtr choisit le bon LLM pour chaque requête. Vous payez moins.",
+    "description": "Feature card description: Model Router"
+  },
+  "home.feature.analytics.title": {
+    "message": "Analytics",
+    "description": "Feature card title: Analytics"
+  },
+  "home.feature.analytics.desc": {
+    "message": "Chaque token. Chaque coût. En temps réel.",
+    "description": "Feature card description: Analytics"
+  },
+  "home.feature.webhooks.title": {
+    "message": "Webhooks",
+    "description": "Feature card title: Webhooks"
+  },
+  "home.feature.webhooks.desc": {
+    "message": "Alertes budgétaires vers Slack, Teams, ou n'importe quel endpoint.",
+    "description": "Feature card description: Webhooks"
+  },
+  "home.feature.rbac.title": {
+    "message": "RBAC",
+    "description": "Feature card title: RBAC"
+  },
+  "home.feature.rbac.desc": {
+    "message": "Contrôle d'accès pour les équipes. Permissions granulaires par projet.",
+    "description": "Feature card description: RBAC"
   },
   "theme.navbar.mobileLanguageDropdown.label": {
     "message": "Langues",

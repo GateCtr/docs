@@ -48,42 +48,42 @@ const features = [
     titleKey: 'home.feature.optimizer.title',
     title: '-40% Tokens',
     descKey: 'home.feature.optimizer.desc',
-    desc: 'Context Optimizer compresses prompts automatically — same output, lower cost.',
+    desc: 'Prompts compressed automatically. Same output. -40% token cost.',
   },
   {
     icon: <ShieldIcon />,
     titleKey: 'home.feature.budget.title',
     title: 'Budget Firewall',
     descKey: 'home.feature.budget.desc',
-    desc: 'Hard caps per project. Requests are blocked the moment a limit is hit.',
+    desc: 'Hard caps per project. Requests blocked the moment a limit is hit.',
   },
   {
     icon: <RouteIcon />,
     titleKey: 'home.feature.router.title',
     title: 'Model Router',
     descKey: 'home.feature.router.desc',
-    desc: 'GateCtr picks the right LLM for each request. You pay for the model you actually need.',
+    desc: 'GateCtr picks the right LLM for each request. You pay less.',
   },
   {
     icon: <BarChartIcon />,
     titleKey: 'home.feature.analytics.title',
     title: 'Analytics',
     descKey: 'home.feature.analytics.desc',
-    desc: 'Every token, every cost, real-time — across all projects and models.',
+    desc: 'Every token. Every cost. Real-time.',
   },
   {
     icon: <BellIcon />,
     titleKey: 'home.feature.webhooks.title',
     title: 'Webhooks',
     descKey: 'home.feature.webhooks.desc',
-    desc: 'Push budget alerts and events to Slack, Teams, or any endpoint.',
+    desc: 'Budget alerts sent to Slack, Teams, or any endpoint.',
   },
   {
     icon: <KeyIcon />,
     titleKey: 'home.feature.rbac.title',
     title: 'RBAC',
     descKey: 'home.feature.rbac.desc',
-    desc: 'Role-based access control for teams. Granular permissions per project.',
+    desc: 'Team access control. Granular permissions per project.',
   },
 ];
 
@@ -96,19 +96,18 @@ function HeroSection() {
         </h1>
         <p className="hero__subtitle">
           <Translate id="home.hero.subtitle">
-            GateCtr sits between your app and any LLM provider. One endpoint swap. No code changes.
-            Full control over costs, routing, and observability.
+            One endpoint swap. -40% token costs. No code changes.
           </Translate>
         </p>
         <div className={styles.buttons}>
           <Link className="button button--secondary button--lg" to="/docs/getting-started/quickstart">
-            <Translate id="home.hero.cta.quickstart">Quickstart — 5 min ⚡</Translate>
+            <Translate id="home.hero.cta.primary">Start free</Translate>
           </Link>
           <Link
             className="button button--outline button--secondary button--lg"
             to="/docs/api-reference/complete"
           >
-            <Translate id="home.hero.cta.api">API Reference</Translate>
+            <Translate id="home.hero.cta.secondary">View docs</Translate>
           </Link>
         </div>
       </div>
@@ -116,13 +115,13 @@ function HeroSection() {
   );
 }
 
-function FeatureCard({ icon, title, desc }) {
+function FeatureCard({ icon, titleKey, title, descKey, desc }) {
   return (
     <div className={clsx('col col--4', styles.featureCol)}>
       <div className={styles.featureCard}>
         <div className={styles.featureIcon}>{icon}</div>
-        <h3>{title}</h3>
-        <p>{desc}</p>
+        <h3><Translate id={titleKey}>{title}</Translate></h3>
+        <p><Translate id={descKey}>{desc}</Translate></p>
       </div>
     </div>
   );
@@ -136,7 +135,7 @@ export default function Home() {
       description={translate({
         id: 'home.meta.description',
         message:
-          'GateCtr is an LLM gateway with built-in cost control, smart routing, prompt compression, and real-time analytics.',
+          'One endpoint. Every LLM. -40% token costs with no code changes. Built-in budget control, smart routing, and real-time analytics.',
       })}
     >
       <HeroSection />
@@ -145,7 +144,7 @@ export default function Home() {
           <div className="container">
             <div className="row">
               {features.map((f) => (
-                <FeatureCard key={f.title} {...f} />
+                <FeatureCard key={f.titleKey} {...f} />
               ))}
             </div>
           </div>
