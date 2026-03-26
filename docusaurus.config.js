@@ -9,6 +9,7 @@ const config = {
   url: 'https://docs.gatectr.com',
   baseUrl: '/',
 
+  trailingSlash: false,
   onBrokenLinks: 'warn',
   markdown: {
     hooks: {
