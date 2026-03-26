@@ -117,7 +117,8 @@ const config = {
         docs: {
           sidebarPath: './sidebars.js',
           editUrl: 'https://github.com/GateCtr/docs/edit/main/',
-          showLastUpdateTime: false,
+          showLastUpdateTime: true,
+          showLastUpdateAuthor: true,
         },
         blog: false,
         theme: {
