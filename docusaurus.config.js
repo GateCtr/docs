@@ -60,12 +60,51 @@ const config = {
       tagName: 'script',
       attributes: { type: 'application/ld+json' },
       innerHTML: JSON.stringify({
-        '@context': 'https://schema.org/',
-        '@type': 'Organization',
-        name: 'GateCtr',
-        url: 'https://gatectr.com',
-        description:
-          'GateCtr is an LLM gateway that sits between your app and any LLM provider — with cost control, smart routing, and real-time analytics.',
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@type': 'Organization',
+            '@id': 'https://gatectr.com/#organization',
+            name: 'GateCtr',
+            url: 'https://gatectr.com',
+            logo: 'https://docs.gatectr.com/img/logo.svg',
+            description:
+              'GateCtr is an LLM gateway that sits between your app and any LLM provider — with cost control, smart routing, prompt compression, and real-time analytics.',
+            sameAs: [
+              'https://github.com/GateCtr',
+              'https://twitter.com/gatectrl',
+            ],
+          },
+          {
+            '@type': 'WebSite',
+            '@id': 'https://docs.gatectr.com/#website',
+            url: 'https://docs.gatectr.com',
+            name: 'GateCtr Docs',
+            description: 'Official documentation for the GateCtr LLM gateway — SDKs, API reference, and guides.',
+            publisher: { '@id': 'https://gatectr.com/#organization' },
+            inLanguage: ['en', 'fr'],
+            potentialAction: {
+              '@type': 'SearchAction',
+              target: {
+                '@type': 'EntryPoint',
+                urlTemplate: 'https://docs.gatectr.com/search?q={search_term_string}',
+              },
+              'query-input': 'required name=search_term_string',
+            },
+          },
+          {
+            '@type': 'SoftwareApplication',
+            '@id': 'https://gatectr.com/#software',
+            name: 'GateCtr',
+            applicationCategory: 'DeveloperApplication',
+            operatingSystem: 'Any',
+            url: 'https://gatectr.com',
+            offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+            description:
+              'LLM gateway with token optimization, budget firewall, model routing, and real-time analytics.',
+            publisher: { '@id': 'https://gatectr.com/#organization' },
+          },
+        ],
       }),
     },
   ],
@@ -87,6 +126,26 @@ const config = {
         sitemap: {
           changefreq: 'weekly',
           priority: 0.5,
+          createSitemapItems: async (params) => {
+            const { defaultCreateSitemapItems, ...rest } = params;
+            const items = await defaultCreateSitemapItems(rest);
+            return items.map((item) => {
+              const u = item.url;
+              if (u.endsWith('docs.gatectr.com') || u.endsWith('docs.gatectr.com/')) {
+                return { ...item, priority: 1.0, changefreq: 'daily' };
+              }
+              if (u.includes('/getting-started/quickstart') || u.includes('/intro')) {
+                return { ...item, priority: 0.9, changefreq: 'weekly' };
+              }
+              if (u.includes('/api-reference/') || u.includes('/sdks/')) {
+                return { ...item, priority: 0.8, changefreq: 'weekly' };
+              }
+              if (u.includes('/features/') || u.includes('/getting-started/')) {
+                return { ...item, priority: 0.7, changefreq: 'weekly' };
+              }
+              return { ...item, priority: 0.5, changefreq: 'monthly' };
+            });
+          },
         },
       }),
     ],
@@ -116,12 +175,16 @@ const config = {
         {
           name: 'keywords',
           content:
-            'LLM gateway, AI API, OpenAI proxy, token optimization, cost control, model router, prompt compression',
+            'GateCtr, LLM gateway, AI API gateway, OpenAI proxy, token optimization, cost control, model router, prompt compression, LLM cost reduction',
         },
+        { name: 'author', content: 'GateCtr' },
         { name: 'twitter:card', content: 'summary_large_image' },
         { name: 'twitter:site', content: '@gatectrl' },
+        { name: 'twitter:creator', content: '@gatectrl' },
         { property: 'og:type', content: 'website' },
         { property: 'og:site_name', content: 'GateCtr Docs' },
+        { property: 'og:locale', content: 'en_US' },
+        { property: 'og:locale:alternate', content: 'fr_FR' },
       ],
 
       navbar: {
