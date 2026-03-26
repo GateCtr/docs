@@ -89,24 +89,31 @@ const features = [
 
 function HeroSection() {
   return (
-    <header className={clsx('hero hero--primary', styles.heroBanner)}>
+    <header className={styles.heroBanner}>
       <div className="container">
-        <h1 className="hero__title">
-          <Translate id="home.hero.title">One gateway. Every LLM.</Translate>
+        <div className={styles.heroEyebrow}>
+          <Translate id="home.hero.eyebrow">LLM Gateway · Cost Control · Smart Routing</Translate>
+        </div>
+        <h1 className={styles.heroTitle}>
+          <Translate id="home.hero.title.line1">One gateway.</Translate>
+          {' '}
+          <span className={styles.heroAccent}>
+            <Translate id="home.hero.title.line2">Every LLM.</Translate>
+          </span>
         </h1>
-        <p className="hero__subtitle">
+        <p className={styles.heroSubtitle}>
           <Translate id="home.hero.subtitle">
             One endpoint swap. -40% token costs. No code changes.
           </Translate>
         </p>
+        <div className={styles.heroCode}>
+          <Translate id="home.hero.code">npm install @gatectr/sdk</Translate>
+        </div>
         <div className={styles.buttons}>
-          <Link className="button button--secondary button--lg" to="/docs/getting-started/quickstart">
+          <Link className={styles.btnPrimary} to="/docs/getting-started/quickstart">
             <Translate id="home.hero.cta.primary">Start free</Translate>
           </Link>
-          <Link
-            className="button button--outline button--secondary button--lg"
-            to="/docs/api-reference/complete"
-          >
+          <Link className={styles.btnSecondary} to="/docs/api-reference/complete">
             <Translate id="home.hero.cta.secondary">View docs</Translate>
           </Link>
         </div>

@@ -1,17 +1,153 @@
 .heroBanner {
-  padding: 5rem 0;
+  padding: 5.5rem 0 4.5rem;
   text-align: center;
   overflow: hidden;
-  background: linear-gradient(135deg, #1B4F82 0%, #0f2d4d 60%, #091d33 100%);
+  position: relative;
+  background: transparent;
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+}
+
+.heroBanner::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #1B4F82 0%, #00B4C8 50%, #1B4F82 100%);
+}
+
+.heroEyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #1B4F82;
+  background: rgba(27, 79, 130, 0.08);
+  border: 1px solid rgba(27, 79, 130, 0.22);
+  border-radius: 100px;
+  padding: 0.3rem 0.9rem;
+  margin-bottom: 1.75rem;
+}
+
+[data-theme='dark'] .heroEyebrow {
+  color: #00B4C8;
+  background: rgba(0, 180, 200, 0.1);
+  border-color: rgba(0, 180, 200, 0.25);
+}
+
+.heroTitle {
+  font-size: clamp(2.25rem, 5vw, 3.5rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+  margin-bottom: 1.25rem;
+  color: var(--ifm-heading-color);
+}
+
+.heroAccent {
+  color: var(--ifm-color-primary);
+}
+
+.heroSubtitle {
+  font-size: 1.15rem;
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--ifm-color-secondary-darkest);
+  max-width: 540px;
+  margin: 0 auto 2rem;
+  opacity: 0.85;
+}
+
+[data-theme='dark'] .heroSubtitle {
+  color: var(--ifm-color-secondary-lightest);
+}
+
+.heroCode {
+  display: inline-block;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 0.8rem;
+  background: var(--ifm-code-background);
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 8px;
+  padding: 0.65rem 1.25rem;
+  margin-bottom: 2.25rem;
+  color: var(--ifm-color-primary);
+  letter-spacing: 0;
+}
+
+[data-theme='dark'] .heroCode {
+  color: #00B4C8;
 }
 
 .buttons {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
-  margin-top: 2rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
+}
+
+.btnPrimary {
+  background: var(--ifm-color-primary);
+  color: #fff !important;
+  border: 2px solid var(--ifm-color-primary);
+  border-radius: 8px;
+  padding: 0.65rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.btnPrimary:hover {
+  background: var(--ifm-color-primary-dark);
+  border-color: var(--ifm-color-primary-dark);
+  color: #fff !important;
+  transform: translateY(-1px);
+  text-decoration: none;
+}
+
+[data-theme='dark'] .btnPrimary {
+  background: #00B4C8;
+  border-color: #00B4C8;
+  color: #0a0a0a !important;
+}
+
+[data-theme='dark'] .btnPrimary:hover {
+  background: #00c6dc;
+  border-color: #00c6dc;
+  color: #0a0a0a !important;
+}
+
+.btnSecondary {
+  background: transparent;
+  color: var(--ifm-color-primary) !important;
+  border: 2px solid var(--ifm-color-emphasis-300);
+  border-radius: 8px;
+  padding: 0.65rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: border-color 0.15s, transform 0.1s;
+}
+
+.btnSecondary:hover {
+  border-color: var(--ifm-color-primary);
+  transform: translateY(-1px);
+  text-decoration: none;
+}
+
+[data-theme='dark'] .btnSecondary {
+  color: #00B4C8 !important;
+  border-color: var(--ifm-color-emphasis-300);
+}
+
+[data-theme='dark'] .btnSecondary:hover {
+  border-color: #00B4C8;
 }
 
 .features {
@@ -19,7 +155,7 @@
 }
 
 .featureCol {
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .featureCard {
@@ -36,8 +172,8 @@
 }
 
 .featureIcon {
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.25rem;
+  height: 2.25rem;
   margin-bottom: 0.75rem;
   color: var(--ifm-color-primary);
 }
@@ -48,14 +184,19 @@
 }
 
 .featureCard h3 {
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 700;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.4rem;
 }
 
 .featureCard p {
-  font-size: 0.95rem;
-  opacity: 0.8;
+  font-size: 0.93rem;
   line-height: 1.6;
   margin: 0;
+  color: var(--ifm-color-secondary-darkest);
+  opacity: 0.85;
+}
+
+[data-theme='dark'] .featureCard p {
+  color: var(--ifm-color-secondary-lightest);
 }

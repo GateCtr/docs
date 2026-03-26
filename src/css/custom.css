@@ -52,22 +52,6 @@ code {
   height: 28px;
 }
 
-/* ── Hero section ───────────────────────────────────────────────────────── */
-.hero--primary {
-  background: linear-gradient(135deg, #1B4F82 0%, #0f2d4d 100%);
-}
-
-.hero__title {
-  font-size: 3rem;
-  font-weight: 800;
-  letter-spacing: -0.025em;
-}
-
-.hero__subtitle {
-  font-size: 1.2rem;
-  opacity: 0.85;
-  font-weight: 400;
-}
 
 /* ── Feature cards ──────────────────────────────────────────────────────── */
 .feature-card {
