@@ -102,9 +102,19 @@ Revoked keys are rejected within seconds.
 ```bash
 # Store securely in .env (not committed to git)
 GATECTR_API_KEY=gct_live_xxxxxxxxxxxx
+```
 
-# Reference in code
+```typescript
+// Reference in Node.js code
+import { GateCtr } from '@gatectr/sdk';
 const client = new GateCtr({ apiKey: process.env.GATECTR_API_KEY });
+```
+
+```python
+# Reference in Python code
+import os
+from gatectr import GateCtr
+client = GateCtr(api_key=os.environ["GATECTR_API_KEY"])
 ```
 
 ## What happens on auth failure

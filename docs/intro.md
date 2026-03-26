@@ -23,6 +23,6 @@ GateCtr sits between your app and any LLM provider. One endpoint swap. No code c
 ## Start here
 
 - [Quickstart](getting-started/quickstart.md) — up and running in 5 min
-- [Node.js SDK](sdks/node.md)
-- [Python SDK](sdks/python.md)
-- [API Reference](api-reference/complete.md)
+- [Node.js SDK](sdks/node.md) — `@gatectr/sdk`
+- [Python SDK](sdks/python.md) — `gatectr-sdk`
+- [API Reference](api-reference/complete.md) — REST endpoints

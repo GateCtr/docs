@@ -102,9 +102,19 @@ Les clés révoquées sont rejetées en quelques secondes.
 ```bash
 # Stockez en sécurité dans .env (non commité dans git)
 GATECTR_API_KEY=gct_live_xxxxxxxxxxxx
+```
 
-# Référencez dans le code
+```typescript
+// Référencez dans le code Node.js
+import { GateCtr } from '@gatectr/sdk';
 const client = new GateCtr({ apiKey: process.env.GATECTR_API_KEY });
+```
+
+```python
+# Référencez dans le code Python
+import os
+from gatectr import GateCtr
+client = GateCtr(api_key=os.environ["GATECTR_API_KEY"])
 ```
 
 ## Que se passe-t-il en cas d'échec d'authentification

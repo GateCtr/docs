@@ -23,6 +23,6 @@ GateCtr s'intercale entre votre application et n'importe quel fournisseur LLM. U
 ## Par où commencer
 
 - [Démarrage rapide](getting-started/quickstart.md) — opérationnel en 5 min
-- [SDK Node.js](sdks/node.md)
-- [SDK Python](sdks/python.md)
-- [Référence API](api-reference/complete.md)
+- [SDK Node.js](sdks/node.md) — `@gatectr/sdk`
+- [SDK Python](sdks/python.md) — `gatectr-sdk`
+- [Référence API](api-reference/complete.md) — endpoints REST
