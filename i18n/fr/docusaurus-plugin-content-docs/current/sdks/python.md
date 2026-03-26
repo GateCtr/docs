@@ -53,6 +53,10 @@ client = GateCtr(
 )
 ```
 
+:::note Contexte async
+Toutes les méthodes de `GateCtr` sont async et doivent être appelées dans une fonction `async def` avec `await`. Pour du code synchrone, utilisez `SyncGateCtr` à la place.
+:::
+
 ## `client.complete()`
 
 Completion de texte — POST /complete.
