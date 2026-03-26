@@ -1,0 +1,22 @@
+{
+  "sidebar.docsSidebar.doc.intro": {
+    "message": "Introduction",
+    "description": "The label for doc intro in the sidebar"
+  },
+  "sidebar.docsSidebar.category.Getting Started": {
+    "message": "Démarrage",
+    "description": "The label for category Getting Started in the sidebar"
+  },
+  "sidebar.docsSidebar.category.SDKs": {
+    "message": "SDKs",
+    "description": "The label for category SDKs in the sidebar"
+  },
+  "sidebar.docsSidebar.category.Features": {
+    "message": "Fonctionnalités",
+    "description": "The label for category Features in the sidebar"
+  },
+  "sidebar.docsSidebar.category.API Reference": {
+    "message": "Référence API",
+    "description": "The label for category API Reference in the sidebar"
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "link.title.Docs": {
+    "message": "Docs",
+    "description": "Footer column title: Docs"
+  },
+  "link.title.Product": {
+    "message": "Produit",
+    "description": "Footer column title: Product"
+  },
+  "link.title.Community": {
+    "message": "Communauté",
+    "description": "Footer column title: Community"
+  },
+  "link.item.label.Quickstart": {
+    "message": "Démarrage rapide",
+    "description": "Footer link: Quickstart"
+  },
+  "link.item.label.API Reference": {
+    "message": "Référence API",
+    "description": "Footer link: API Reference"
+  },
+  "link.item.label.Node.js SDK": {
+    "message": "SDK Node.js",
+    "description": "Footer link: Node.js SDK"
+  },
+  "link.item.label.Python SDK": {
+    "message": "SDK Python",
+    "description": "Footer link: Python SDK"
+  },
+  "link.item.label.Dashboard": {
+    "message": "Tableau de bord",
+    "description": "Footer link: Dashboard"
+  },
+  "link.item.label.Pricing": {
+    "message": "Tarification",
+    "description": "Footer link: Pricing"
+  },
+  "link.item.label.Status": {
+    "message": "Statut",
+    "description": "Footer link: Status"
+  },
+  "copyright": {
+    "message": "Copyright © {year} GateCtr. Construit avec Docusaurus.",
+    "description": "The footer copyright"
+  }
+}

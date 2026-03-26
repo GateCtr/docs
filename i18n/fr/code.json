@@ -1,0 +1,30 @@
+{
+  "home.hero.title": {
+    "message": "Une passerelle. Tous les LLMs.",
+    "description": "Hero title on homepage"
+  },
+  "home.hero.subtitle": {
+    "message": "GateCtr s'intercale entre votre application et n'importe quel fournisseur LLM. Un simple changement d'endpoint. Sans modifier votre code. Contrôle total sur les coûts, le routage et l'observabilité.",
+    "description": "Hero subtitle on homepage"
+  },
+  "home.hero.cta.quickstart": {
+    "message": "Démarrage rapide — 5 min ⚡",
+    "description": "Primary CTA button"
+  },
+  "home.hero.cta.api": {
+    "message": "Référence API",
+    "description": "Secondary CTA button"
+  },
+  "home.meta.title": {
+    "message": "GateCtr — Une passerelle. Tous les LLMs.",
+    "description": "Page title for SEO"
+  },
+  "home.meta.description": {
+    "message": "GateCtr est une passerelle LLM avec contrôle des coûts intégré, routage intelligent, compression des prompts et analytiques en temps réel.",
+    "description": "Page description for SEO"
+  },
+  "theme.navbar.mobileLanguageDropdown.label": {
+    "message": "Langues",
+    "description": "Mobile language dropdown label"
+  }
+}
