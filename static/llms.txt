@@ -1,0 +1,39 @@
+# GateCtr
+
+> GateCtr is an LLM gateway that sits between your app and any LLM provider. One endpoint swap gives you cost control, smart routing, prompt compression, and real-time analytics.
+
+GateCtr provides: -40% token costs via Context Optimizer, hard budget caps via Budget Firewall, automatic model selection via Model Router, real-time analytics, webhooks, and RBAC.
+
+Base API URL: https://api.gatectr.com/v1
+Dashboard: https://app.gatectr.com
+Authentication: Bearer token — header `Authorization: Bearer <api-key>`
+
+## Getting Started
+
+- [Introduction](https://docs.gatectr.com/docs/intro): Overview of GateCtr features and capabilities
+- [Quickstart](https://docs.gatectr.com/docs/getting-started/quickstart): Up and running in 5 minutes — install SDK, get API key, make first request
+- [Authentication](https://docs.gatectr.com/docs/getting-started/authentication): How to authenticate with the GateCtr API
+- [First Request](https://docs.gatectr.com/docs/getting-started/first-request): Step-by-step guide to your first LLM request through GateCtr
+
+## API Reference
+
+- [POST /v1/complete](https://docs.gatectr.com/docs/api-reference/complete): Send text completion requests through the gateway — supports streaming, optimization, routing, and budget enforcement
+- [POST /v1/chat](https://docs.gatectr.com/docs/api-reference/chat): Chat completions endpoint — OpenAI-compatible
+- [GET /v1/usage](https://docs.gatectr.com/docs/api-reference/usage): Retrieve token usage and cost data for a project
+
+## Features
+
+- [Context Optimizer](https://docs.gatectr.com/docs/features/context-optimizer): Automatically compresses prompts by up to 40% — reduces token costs while preserving output quality
+- [Budget Firewall](https://docs.gatectr.com/docs/features/budget-firewall): Hard token and cost caps per project — blocks requests the moment a limit is hit, no surprise invoices
+- [Model Router](https://docs.gatectr.com/docs/features/model-router): Automatically selects the best and cheapest LLM for each request based on task complexity and pricing
+- [Analytics](https://docs.gatectr.com/docs/features/analytics): Real-time token usage, cost tracking, and request logs per project
+- [Webhooks](https://docs.gatectr.com/docs/features/webhooks): Push budget alerts and events to Slack, Teams, or any URL
+
+## SDKs
+
+- [Node.js SDK](https://docs.gatectr.com/docs/sdks/node): `npm install @gatectr/sdk` — TypeScript/JavaScript client
+- [Python SDK](https://docs.gatectr.com/docs/sdks/python): `pip install gatectr-sdk` — async Python client
+
+## Optional
+
+- [llms-full.txt](https://docs.gatectr.com/llms-full.txt): Complete documentation in a single file for LLM ingestion

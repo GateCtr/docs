@@ -1,0 +1,360 @@
+# GateCtr — Complete Documentation
+
+> GateCtr is an LLM gateway that sits between your app and any LLM provider. One endpoint swap gives you cost control, smart routing, prompt compression, and real-time analytics.
+
+Base API URL: https://api.gatectr.com/v1
+Dashboard: https://app.gatectr.com
+Authentication: Bearer token — header `Authorization: Bearer <api-key>`
+
+---
+
+# Introduction
+
+GateCtr sits between your app and any LLM provider. One endpoint swap. No code changes. Full control over costs, routing, and observability.
+
+What you get:
+- -40% tokens — Context Optimizer compresses prompts automatically
+- Budget Firewall — Hard caps per project. No surprise invoices.
+- Model Router — GateCtr picks the right LLM for each request
+- Analytics — Every token, every cost, real-time
+- Webhooks — Push events to Slack, Teams, or any URL
+- RBAC — Team access control with roles
+
+---
+
+# Authentication
+
+All API requests require a GateCtr API key passed as a Bearer token:
+
+```
+Authorization: Bearer gct_live_xxxxxxxxxxxx
+```
+
+Key formats:
+- `gct_live_` prefix — Production (real LLM calls, real costs)
+- `gct_test_` prefix — Test mode (mock responses, no costs)
+
+Get your key: sign in at gatectr.com → Settings → API Keys → Create key.
+
+Security: Never commit API keys to source control. Use environment variables. Rotate keys regularly. LLM provider keys are AES-256 encrypted at rest.
+
+On auth failure: HTTP 401 with `{"error": {"type": "unauthorized", "message": "Invalid or missing API key."}}`
+
+---
+
+# Quickstart
+
+1. Get your API key from https://app.gatectr.com
+2. Install the SDK: `npm install @gatectr/sdk` or `pip install gatectr-sdk`
+3. Make your first request:
+
+Node.js:
+```typescript
+import { GateCtr } from '@gatectr/sdk';
+const client = new GateCtr({ apiKey: process.env.GATECTR_API_KEY });
+const response = await client.complete({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Hello' }],
+});
+console.log(response.choices[0].text);
+console.log(response.gatectr.tokensSaved);
+console.log(response.gatectr.modelUsed);
+console.log(response.gatectr.latencyMs);
+```
+
+Python:
+```python
+import os
+from gatectr import GateCtr
+client = GateCtr(api_key=os.environ["GATECTR_API_KEY"])
+response = await client.complete(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Hello"}],
+)
+print(response.choices[0].text)
+```
+
+Drop-in for OpenAI SDK (no code changes needed):
+```typescript
+import OpenAI from 'openai';
+const openai = new OpenAI({
+  apiKey: process.env.GATECTR_API_KEY,
+  baseURL: 'https://api.gatectr.com/v1',
+});
+```
+
+---
+
+# Request Lifecycle
+
+```
+Your app
+  → GateCtr API (https://api.gatectr.com/v1/complete)
+    → 1. Budget Firewall check        (blocks if limit exceeded → 429)
+    → 2. Context Optimizer            (compresses prompt → fewer tokens)
+    → 3. Model Router                 (selects best model if route: true)
+    → 4. LLM provider                 (OpenAI, Anthropic, Mistral, Gemini…)
+    → 5. Response + analytics logged  (tokens, cost, latency stored)
+  → Your app                          (response + GateCtr headers)
+```
+
+Steps 2 and 3 are optional but enabled by default on Pro plans. If budget is exceeded at step 1, no LLM call is made and no cost is incurred.
+
+Supported models: OpenAI (gpt-4o, gpt-4o-mini, gpt-4-turbo, gpt-3.5-turbo), Anthropic (claude-3-5-sonnet, claude-3-opus, claude-3-haiku), Mistral (mistral-large, mistral-medium, mistral-small), Google Gemini (gemini-1.5-pro, gemini-1.5-flash), Meta Llama (llama-3.1-70b, llama-3.1-8b).
+
+Use `model: "auto"` to let the Model Router pick automatically.
+
+---
+
+# API Reference
+
+## POST /v1/complete
+
+Send a text completion request through GateCtr.
+
+Endpoint: `POST https://api.gatectr.com/v1/complete`
+
+Required headers:
+- `Authorization: Bearer <your-api-key>`
+- `Content-Type: application/json`
+
+Request body parameters:
+- `model` (string, required): Model name or "auto" for Model Router
+- `messages` (array, required): OpenAI-compatible messages array with `role` and `content`
+- `temperature` (number, optional, default 1.0): Sampling temperature 0–2
+- `max_tokens` (number, optional): Maximum completion tokens
+- `stream` (boolean, optional, default false): Enable streaming via SSE
+- `optimize` (boolean, optional, default true): Enable Context Optimizer (Pro+)
+- `route` (boolean, optional, default false): Enable Model Router (Pro+)
+- `budgetId` (string, optional): Override the active project budget
+
+Response:
+```json
+{
+  "id": "cmpl-abc123",
+  "object": "text_completion",
+  "model": "gpt-4o",
+  "choices": [{"text": "Hello! How can I help you?", "finish_reason": "stop"}],
+  "usage": {"prompt_tokens": 12, "completion_tokens": 9, "total_tokens": 21, "saved_tokens": 8},
+  "gatectr": {"requestId": "req_abc123", "latencyMs": 342, "overage": false, "modelUsed": "gpt-4o", "tokensSaved": 8}
+}
+```
+
+Response headers: `X-GateCtr-Request-Id`, `X-GateCtr-Latency-Ms`, `X-GateCtr-Overage`
+
+Streaming: When `stream: true`, returns SSE chunks: `{"id":"cmpl-abc123","delta":"Hello","finishReason":null}`
+
+Error codes: 400 bad_request, 401 unauthorized, 422 validation_error, 429 budget_exceeded, 429 rate_limit_exceeded, 502 provider_error, 503 service_unavailable
+
+## POST /v1/chat
+
+Chat completion endpoint. Returns responses in `choices[].message` format.
+
+Endpoints:
+- `POST https://api.gatectr.com/v1/chat` — native GateCtr endpoint
+- `POST https://api.gatectr.com/v1/chat/completions` — OpenAI-compatible alias
+
+Same request parameters as /v1/complete.
+
+Response:
+```json
+{
+  "id": "chat-abc123",
+  "object": "chat.completion",
+  "model": "gpt-4o",
+  "choices": [{"message": {"role": "assistant", "content": "Hello! How can I help you?"}, "finish_reason": "stop"}],
+  "usage": {"prompt_tokens": 12, "completion_tokens": 9, "total_tokens": 21, "saved_tokens": 8},
+  "gatectr": {"requestId": "req_abc123", "latencyMs": 342, "overage": false, "modelUsed": "gpt-4o", "tokensSaved": 8}
+}
+```
+
+Compatible with OpenAI SDK, LangChain, and LlamaIndex by pointing `baseURL` to `https://api.gatectr.com/v1`.
+
+## GET /v1/usage
+
+Query token usage and cost data for a project.
+
+Endpoint: `GET https://api.gatectr.com/v1/usage`
+
+Query parameters:
+- `from` (string, optional): Start date YYYY-MM-DD
+- `to` (string, optional): End date YYYY-MM-DD
+- `projectId` (string, optional): Filter by project ID
+
+Response:
+```json
+{
+  "totalTokens": 4820000,
+  "totalRequests": 12400,
+  "totalCostUsd": 14.23,
+  "savedTokens": 1920000,
+  "from": "2025-01-01",
+  "to": "2025-01-31",
+  "byProject": [
+    {"projectId": "proj_123", "totalTokens": 2900000, "totalRequests": 7400, "totalCostUsd": 8.55}
+  ]
+}
+```
+
+---
+
+# Features
+
+## Context Optimizer
+
+Compresses prompts by up to 40% before forwarding to the LLM. Preserves all semantic meaning and code blocks.
+
+Techniques: removes redundant whitespace and filler phrases, condenses verbose instructions, trims conversation history to most relevant turns, deduplicates repeated context.
+
+Enable per request: set `optimize: true` in request body or `gatectr.optimize: true` in SDK.
+Enable globally: set `optimize: true` in SDK constructor.
+Disable for specific request: set `optimize: false` (recommended for structured output, JSON mode, function calling, carefully tuned few-shot examples).
+
+Savings example: RAG app with 3,350 tokens → ~2,010 tokens after optimization → ~$0.04 saved per request. At 10,000 requests/day: ~$400/day savings.
+
+Available on Pro plan and above.
+
+## Budget Firewall
+
+Hard token and cost caps per project. Blocks requests the moment a limit is hit — no LLM call made, no cost incurred.
+
+Flow: Request → Budget Firewall check → Under limit: forward to LLM → Over limit: 429 Budget Exceeded
+
+Set budget via dashboard (Projects → Your project → Budget) or via API:
+```bash
+curl -X PATCH https://api.gatectr.com/v1/budget \
+  -H "Authorization: Bearer $GATECTR_API_KEY" \
+  -d '{"project_id": "proj_123", "limit_tokens": 100000, "period": "day"}'
+```
+
+Budget types:
+- `limit_tokens`: Cap on total tokens (prompt + completion)
+- `limit_cost_usd`: Cap on estimated USD cost
+
+Periods: `day` (resets midnight UTC), `month` (resets 1st of month), `total` (lifetime, manual reset)
+
+Soft alerts: set `alert_at_percent` to receive a webhook before the hard cap. Example: `"alert_at_percent": 80` fires `budget.threshold_reached` webhook at 80% usage.
+
+Override budget per request: use `gatectr.budgetId` to apply a different project's budget.
+
+Blocked request response: HTTP 429 with `{"error": {"type": "budget_exceeded", "message": "Request blocked. Budget limit reached."}}`
+
+Available on Free plan and above.
+
+## Model Router
+
+Automatically selects the best and cheapest LLM for each request based on task complexity, output requirements, current model pricing, provider preferences, and latency requirements.
+
+Enable options:
+1. Set `model: "auto"` in request
+2. Set `route: true` in request body or `gatectr.route: true` in SDK
+3. Set `route: true` globally in SDK constructor
+
+Routing logic:
+- Simple Q&A, short tasks → gpt-3.5-turbo, mistral-small
+- Summarization, classification → gpt-4o-mini, claude-3-haiku
+- Complex reasoning, analysis → gpt-4o, claude-3-5-sonnet
+- Code generation, debugging → gpt-4o, claude-3-5-sonnet
+- Long-form writing → gpt-4o, mistral-large
+
+Configure in dashboard: Settings → Model Router (allow list, block list, cost threshold, latency mode).
+
+After routing, `response.gatectr.modelUsed` tells you which model handled the request.
+
+Available on Pro plan and above.
+
+## Analytics
+
+Every request is logged automatically: prompt_tokens, completion_tokens, saved_tokens, model, latency_ms, project_id, timestamp, overage.
+
+Dashboard at app.gatectr.com: overview, by project, trends (7d/30d/90d), optimization savings.
+
+Query via API: GET /v1/usage with optional projectId, from, to parameters.
+
+Data retention: Free 7 days, Pro 30 days, Team 90 days, Enterprise custom.
+
+## Webhooks
+
+Receive real-time notifications at any HTTPS endpoint when events happen.
+
+Supported events:
+- Billing: billing.plan_upgraded, billing.plan_downgraded, billing.payment_failed, billing.trial_started, billing.trial_ending, billing.subscription_cancellation_scheduled
+- Budget: budget.threshold_reached, budget.exceeded, budget.reset
+- Requests: request.completed, request.failed, request.routed
+- Provider: provider.fallback, provider.error
+- API Keys: api_key.created, api_key.revoked, api_key.expired
+- Projects: project.created
+- Team: team.member.added, team.member.removed
+- Usage: usage.daily
+- Webhook meta: webhook.test, webhook.failed
+
+Register via dashboard (Settings → Webhooks → Add endpoint) or API:
+```bash
+curl -X POST https://api.gatectr.com/v1/webhooks \
+  -H "Authorization: Bearer $GATECTR_API_KEY" \
+  -d '{"name": "My endpoint", "url": "https://your-app.com/webhooks/gatectr", "events": ["budget.threshold_reached"]}'
+```
+
+URL must use HTTPS. Use `"events": ["*"]` for wildcard subscription.
+
+Payload format:
+```json
+{"event": "billing.plan_upgraded", "project_id": "usr_abc123", "timestamp": "2026-03-26T10:00:00.000Z", "data": {"previous_plan": "PRO", "new_plan": "TEAM"}}
+```
+
+Signature verification: `X-GateCtr-Signature: hmac-sha256=<hex>` computed over raw request body using your `whsec_…` secret. Always use timing-safe comparison.
+
+Retry policy: up to 6 attempts with exponential backoff (1s, 2s, 4s, 8s, 16s). 4xx errors fail immediately (except 429). Auto-disabled after 10 consecutive failures.
+
+Available on Pro plan and above.
+
+---
+
+# Node.js SDK (@gatectr/sdk)
+
+Install: `npm install @gatectr/sdk`
+
+Constructor options: apiKey (required), baseUrl, timeout (default 30000ms), maxRetries (default 3), route (default false), optimize (default true)
+
+Methods:
+- `client.complete(params)` — text completion, returns `CompleteResponse`
+- `client.chat(params)` — chat completion, returns `ChatResponse`
+- `client.stream(params)` — streaming chat, returns `AsyncIterable<StreamChunk>`
+- `client.models()` — list available models
+- `client.usage(params)` — query usage analytics
+
+GateCtrMetadata fields on every response:
+- `requestId` (string): unique request ID
+- `latencyMs` (number): end-to-end latency
+- `overage` (boolean): whether budget cap was exceeded
+- `modelUsed` (string): actual model used
+- `tokensSaved` (number): tokens saved by optimizer
+
+Error classes: GateCtrError, GateCtrApiError (status, code, requestId), GateCtrConfigError, GateCtrTimeoutError (timeoutMs), GateCtrStreamError, GateCtrNetworkError
+
+Drop-in for OpenAI SDK: set `baseURL: 'https://api.gatectr.com/v1'` and use your GateCtr API key.
+
+---
+
+# Python SDK (gatectr-sdk)
+
+Install: `pip install gatectr-sdk` or `uv add gatectr-sdk`. Requires Python 3.9+.
+
+Constructor options: api_key (required), base_url, timeout (default 30.0s), max_retries (default 3), route (default False), optimize (default True)
+
+All methods are async. Use `SyncGateCtr` for synchronous code.
+
+Methods:
+- `await client.complete(model, messages, ...)` — text completion
+- `await client.chat(model, messages, ...)` — chat completion
+- `async for chunk in client.stream(model, messages, ...)` — streaming
+- `await client.models()` — list available models
+- `await client.usage(UsageParams(...))` — query usage analytics
+
+GateCtrMetadata fields: request_id, latency_ms, overage, model_used, tokens_saved
+
+Exception classes: GateCtrError, GateCtrApiError (status, code, request_id), GateCtrConfigError, GateCtrTimeoutError (timeout_s), GateCtrStreamError, GateCtrNetworkError
+
+Drop-in for OpenAI SDK: set `base_url="https://api.gatectr.com/v1"` and use your GateCtr API key.
+Drop-in for LangChain: use `ChatOpenAI(api_key=..., base_url="https://api.gatectr.com/v1", model="gpt-4o")`
+Drop-in for LlamaIndex: use `OpenAI(api_key=..., api_base="https://api.gatectr.com/v1", model="gpt-4o")`
